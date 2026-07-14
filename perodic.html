@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Periodic Table</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: linear-gradient(135deg, #0a0a0f 0%, #0d0d1a 50%, #0a0f1a 100%);
+  min-height: 100vh;
+  font-family: 'Space Mono', monospace;
+  color: #e2e8f0;
+  padding: 12px;
+}
+h1 {
+  font-family: 'Orbitron', monospace;
+  font-size: clamp(13px, 2vw, 22px);
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-align: center;
+  text-shadow: 0 0 30px rgba(139,92,246,0.6);
+  margin-bottom: 4px;
+}
+.subtitle { text-align:center; font-size:10px; color:rgba(255,255,255,0.3); letter-spacing:0.2em; margin-bottom:10px; }
+.controls { display:flex; flex-wrap:wrap; gap:5px; justify-content:center; margin-bottom:10px; align-items:center; }
+#search { background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.15); color:#e2e8f0; border-radius:5px; padding:5px 10px; font-family:inherit; font-size:12px; outline:none; width:150px; }
+#search:focus { border-color:rgba(255,255,255,0.4); }
+.cat-btn { cursor:pointer; border-radius:4px; padding:3px 7px; font-size:9px; font-family:inherit; border:1px solid transparent; background:rgba(255,255,255,0.04); transition:all 0.15s; display:inline-flex; align-items:center; gap:4px; }
+.cat-btn.active { border-color:currentColor; }
+.dot { width:6px; height:6px; border-radius:2px; display:inline-block; flex-shrink:0; }
+.clear-btn { cursor:pointer; font-size:10px; color:#94a3b8; background:rgba(255,255,255,0.04); border:1px solid transparent; border-radius:4px; padding:3px 8px; font-family:inherit; }
+.layout { display:flex; gap:10px; align-items:flex-start; }
+.grid-wrap { overflow-x:auto; flex:1 1 auto; }
+.grid {
+  display:grid;
+  grid-template-columns: repeat(18, minmax(32px, 44px));
+  grid-template-rows: repeat(10, minmax(40px, 48px));
+  gap:2px;
+  min-width:620px;
+}
+.cell { cursor:pointer; border-radius:4px; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:2px; border:1px solid transparent; transition:transform 0.12s, box-shadow 0.12s, opacity 0.12s; position:relative; }
+.cell:hover { transform:scale(1.15); z-index:10; }
+.cell.dimmed { opacity:0.1; }
+.cell.selected { box-shadow:0 0 14px currentColor; }
+.cell .num { font-size:7px; opacity:0.6; line-height:1; }
+.cell .sym { font-family:'Orbitron',monospace; font-size:clamp(10px,1.4vw,14px); font-weight:700; line-height:1.15; }
+.cell .nam { font-size:6px; opacity:0.7; line-height:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+.placeholder { border-radius:4px; display:flex; align-items:center; justify-content:center; font-size:8px; }
+.period-lbl { display:flex; align-items:center; padding-left:3px; font-size:8px; color:rgba(255,255,255,0.2); font-family:'Orbitron',monospace; }
+.series-lbl { display:flex; align-items:center; justify-content:flex-end; padding-right:4px; font-size:7px; line-height:1.3; text-align:right; }
+.panel { width:200px; min-width:190px; flex-shrink:0; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; overflow:hidden; min-height:280px; }
+.panel-bar { height:4px; width:100%; }
+.panel-body { padding:12px; }
+.panel-sym { font-family:'Orbitron',monospace; font-size:32px; font-weight:900; line-height:1; }
+.panel-name { font-size:13px; font-weight:700; color:#e2e8f0; margin-top:3px; }
+.panel-z { font-size:10px; color:rgba(255,255,255,0.4); margin-top:1px; }
+.panel-tag { margin-top:8px; padding:3px 8px; border-radius:4px; font-size:10px; display:inline-block; }
+.panel-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px 8px; margin-top:12px; }
+.panel-lbl { font-size:9px; color:rgba(255,255,255,0.3); letter-spacing:0.07em; }
+.panel-val { font-size:11px; color:#e2e8f0; margin-top:1px; word-break:break-word; }
+.panel-disc { margin-top:12px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.06); }
+.panel-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; height:280px; text-align:center; padding:20px; }
+.panel-icon { font-size:28px; opacity:0.25; margin-bottom:10px; }
+.panel-hint { font-size:11px; color:rgba(255,255,255,0.25); line-height:1.6; }
+.hover-tag { margin-top:14px; padding:5px 12px; border-radius:4px; font-size:11px; }
+.footer { display:flex; justify-content:center; gap:14px; margin-top:12px; flex-wrap:wrap; }
+.footer-item { display:flex; align-items:center; gap:4px; font-size:9px; color:rgba(255,255,255,0.3); }
+</style>
+</head>
+<body>
+<h1>PERIODIC TABLE OF THE ELEMENTS</h1>
+<div class="subtitle">118 ELEMENTS · INTERACTIVE REFERENCE</div>
+<div class="controls">
+  <input id="search" type="text" placeholder="Search name, symbol, number…" oninput="applyFilters()">
+  <div id="cat-buttons" style="display:flex;flex-wrap:wrap;gap:5px;align-items:center;"></div>
+  <button class="clear-btn" id="clear-btn" onclick="clearAll()" style="display:none">✕ Clear</button>
+</div>
+<div class="layout">
+  <div class="grid-wrap"><div class="grid" id="grid"></div></div>
+  <div class="panel" id="panel">
+    <div class="panel-empty">
+      <div class="panel-icon">⚛</div>
+      <div class="panel-hint">Click any element<br>to view its properties</div>
+      <div id="hover-preview"></div>
+    </div>
+  </div>
+</div>
+<div class="footer" id="footer"></div>
+
+<script>
+const CAT={
+  "alkali-metal":{label:"Alkali Metal",color:"#ef4444",bg:"#450a0a"},
+  "alkaline-earth":{label:"Alkaline Earth",color:"#f97316",bg:"#431407"},
+  "transition-metal":{label:"Transition Metal",color:"#eab308",bg:"#422006"},
+  "post-transition":{label:"Post-Transition",color:"#84cc16",bg:"#1a2e05"},
+  "metalloid":{label:"Metalloid",color:"#10b981",bg:"#022c22"},
+  "nonmetal":{label:"Nonmetal",color:"#06b6d4",bg:"#083344"},
+  "halogen":{label:"Halogen",color:"#3b82f6",bg:"#172554"},
+  "noble-gas":{label:"Noble Gas",color:"#8b5cf6",bg:"#2e1065"},
+  "lanthanide":{label:"Lanthanide",color:"#ec4899",bg:"#500724"},
+  "actinide":{label:"Actinide",color:"#f43f5e",bg:"#4c0519"}
+};
+const EL=[
+  {n:1,s:"H",name:"Hydrogen",mass:"1.008",cat:"nonmetal",per:1,grp:1,cfg:"1s¹",en:2.20,mp:-259.16,bp:-252.88,dens:0.000089,disc:"Henry Cavendish",yr:1766},
+  {n:2,s:"He",name:"Helium",mass:"4.003",cat:"noble-gas",per:1,grp:18,cfg:"1s²",en:null,mp:-272.20,bp:-268.93,dens:0.000166,disc:"Pierre Janssen",yr:1868},
+  {n:3,s:"Li",name:"Lithium",mass:"6.941",cat:"alkali-metal",per:2,grp:1,cfg:"[He] 2s¹",en:0.98,mp:180.5,bp:1342,dens:0.534,disc:"Johan Arfwedson",yr:1817},
+  {n:4,s:"Be",name:"Beryllium",mass:"9.012",cat:"alkaline-earth",per:2,grp:2,cfg:"[He] 2s²",en:1.57,mp:1287,bp:2470,dens:1.85,disc:"L.N. Vauquelin",yr:1798},
+  {n:5,s:"B",name:"Boron",mass:"10.811",cat:"metalloid",per:2,grp:13,cfg:"[He] 2s² 2p¹",en:2.04,mp:2076,bp:3927,dens:2.34,disc:"Gay-Lussac",yr:1808},
+  {n:6,s:"C",name:"Carbon",mass:"12.011",cat:"nonmetal",per:2,grp:14,cfg:"[He] 2s² 2p²",en:2.55,mp:3550,bp:4827,dens:2.267,disc:"Ancient",yr:null},
+  {n:7,s:"N",name:"Nitrogen",mass:"14.007",cat:"nonmetal",per:2,grp:15,cfg:"[He] 2s² 2p³",en:3.04,mp:-210.01,bp:-195.79,dens:0.00125,disc:"Daniel Rutherford",yr:1772},
+  {n:8,s:"O",name:"Oxygen",mass:"15.999",cat:"nonmetal",per:2,grp:16,cfg:"[He] 2s² 2p⁴",en:3.44,mp:-218.79,bp:-182.96,dens:0.00143,disc:"C.W. Scheele",yr:1771},
+  {n:9,s:"F",name:"Fluorine",mass:"18.998",cat:"halogen",per:2,grp:17,cfg:"[He] 2s² 2p⁵",en:3.98,mp:-219.67,bp:-188.11,dens:0.0017,disc:"Henri Moissan",yr:1886},
+  {n:10,s:"Ne",name:"Neon",mass:"20.180",cat:"noble-gas",per:2,grp:18,cfg:"[He] 2s² 2p⁶",en:null,mp:-248.59,bp:-246.05,dens:0.0009,disc:"William Ramsay",yr:1898},
+  {n:11,s:"Na",name:"Sodium",mass:"22.990",cat:"alkali-metal",per:3,grp:1,cfg:"[Ne] 3s¹",en:0.93,mp:97.72,bp:883,dens:0.971,disc:"Humphry Davy",yr:1807},
+  {n:12,s:"Mg",name:"Magnesium",mass:"24.305",cat:"alkaline-earth",per:3,grp:2,cfg:"[Ne] 3s²",en:1.31,mp:650,bp:1090,dens:1.738,disc:"Joseph Black",yr:1755},
+  {n:13,s:"Al",name:"Aluminum",mass:"26.982",cat:"post-transition",per:3,grp:13,cfg:"[Ne] 3s² 3p¹",en:1.61,mp:660.32,bp:2519,dens:2.698,disc:"H.C. Ørsted",yr:1825},
+  {n:14,s:"Si",name:"Silicon",mass:"28.086",cat:"metalloid",per:3,grp:14,cfg:"[Ne] 3s² 3p²",en:1.90,mp:1414,bp:3265,dens:2.33,disc:"J.J. Berzelius",yr:1824},
+  {n:15,s:"P",name:"Phosphorus",mass:"30.974",cat:"nonmetal",per:3,grp:15,cfg:"[Ne] 3s² 3p³",en:2.19,mp:44.15,bp:280.5,dens:1.82,disc:"Hennig Brand",yr:1669},
+  {n:16,s:"S",name:"Sulfur",mass:"32.065",cat:"nonmetal",per:3,grp:16,cfg:"[Ne] 3s² 3p⁴",en:2.58,mp:115.21,bp:444.61,dens:2.067,disc:"Ancient",yr:null},
+  {n:17,s:"Cl",name:"Chlorine",mass:"35.453",cat:"halogen",per:3,grp:17,cfg:"[Ne] 3s² 3p⁵",en:3.16,mp:-101.5,bp:-34.04,dens:0.00321,disc:"C.W. Scheele",yr:1774},
+  {n:18,s:"Ar",name:"Argon",mass:"39.948",cat:"noble-gas",per:3,grp:18,cfg:"[Ne] 3s² 3p⁶",en:null,mp:-189.35,bp:-185.85,dens:0.00178,disc:"Lord Rayleigh",yr:1894},
+  {n:19,s:"K",name:"Potassium",mass:"39.098",cat:"alkali-metal",per:4,grp:1,cfg:"[Ar] 4s¹",en:0.82,mp:63.38,bp:759,dens:0.862,disc:"Humphry Davy",yr:1807},
+  {n:20,s:"Ca",name:"Calcium",mass:"40.078",cat:"alkaline-earth",per:4,grp:2,cfg:"[Ar] 4s²",en:1.00,mp:842,bp:1484,dens:1.54,disc:"Humphry Davy",yr:1808},
+  {n:21,s:"Sc",name:"Scandium",mass:"44.956",cat:"transition-metal",per:4,grp:3,cfg:"[Ar] 3d¹ 4s²",en:1.36,mp:1541,bp:2836,dens:2.989,disc:"L.F. Nilson",yr:1879},
+  {n:22,s:"Ti",name:"Titanium",mass:"47.867",cat:"transition-metal",per:4,grp:4,cfg:"[Ar] 3d² 4s²",en:1.54,mp:1668,bp:3287,dens:4.507,disc:"William Gregor",yr:1791},
+  {n:23,s:"V",name:"Vanadium",mass:"50.942",cat:"transition-metal",per:4,grp:5,cfg:"[Ar] 3d³ 4s²",en:1.63,mp:1910,bp:3407,dens:6.11,disc:"A.M. del Río",yr:1801},
+  {n:24,s:"Cr",name:"Chromium",mass:"51.996",cat:"transition-metal",per:4,grp:6,cfg:"[Ar] 3d⁵ 4s¹",en:1.66,mp:1907,bp:2671,dens:7.19,disc:"L.N. Vauquelin",yr:1798},
+  {n:25,s:"Mn",name:"Manganese",mass:"54.938",cat:"transition-metal",per:4,grp:7,cfg:"[Ar] 3d⁵ 4s²",en:1.55,mp:1246,bp:2061,dens:7.21,disc:"C.W. Scheele",yr:1774},
+  {n:26,s:"Fe",name:"Iron",mass:"55.845",cat:"transition-metal",per:4,grp:8,cfg:"[Ar] 3d⁶ 4s²",en:1.83,mp:1538,bp:2861,dens:7.874,disc:"Ancient",yr:null},
+  {n:27,s:"Co",name:"Cobalt",mass:"58.933",cat:"transition-metal",per:4,grp:9,cfg:"[Ar] 3d⁷ 4s²",en:1.88,mp:1495,bp:2927,dens:8.90,disc:"Georg Brandt",yr:1735},
+  {n:28,s:"Ni",name:"Nickel",mass:"58.693",cat:"transition-metal",per:4,grp:10,cfg:"[Ar] 3d⁸ 4s²",en:1.91,mp:1455,bp:2913,dens:8.908,disc:"A.F. Cronstedt",yr:1751},
+  {n:29,s:"Cu",name:"Copper",mass:"63.546",cat:"transition-metal",per:4,grp:11,cfg:"[Ar] 3d¹⁰ 4s¹",en:1.90,mp:1084.62,bp:2562,dens:8.96,disc:"Ancient",yr:null},
+  {n:30,s:"Zn",name:"Zinc",mass:"65.38",cat:"transition-metal",per:4,grp:12,cfg:"[Ar] 3d¹⁰ 4s²",en:1.65,mp:419.53,bp:907,dens:7.134,disc:"Ancient",yr:null},
+  {n:31,s:"Ga",name:"Gallium",mass:"69.723",cat:"post-transition",per:4,grp:13,cfg:"[Ar] 3d¹⁰ 4s² 4p¹",en:1.81,mp:29.76,bp:2229,dens:5.907,disc:"Lecoq de Boisbaudran",yr:1875},
+  {n:32,s:"Ge",name:"Germanium",mass:"72.630",cat:"metalloid",per:4,grp:14,cfg:"[Ar] 3d¹⁰ 4s² 4p²",en:2.01,mp:938.25,bp:2833,dens:5.323,disc:"Clemens Winkler",yr:1886},
+  {n:33,s:"As",name:"Arsenic",mass:"74.922",cat:"metalloid",per:4,grp:15,cfg:"[Ar] 3d¹⁰ 4s² 4p³",en:2.18,mp:817,bp:614,dens:5.727,disc:"Albertus Magnus",yr:1250},
+  {n:34,s:"Se",name:"Selenium",mass:"78.971",cat:"nonmetal",per:4,grp:16,cfg:"[Ar] 3d¹⁰ 4s² 4p⁴",en:2.55,mp:220.8,bp:685,dens:4.81,disc:"J.J. Berzelius",yr:1817},
+  {n:35,s:"Br",name:"Bromine",mass:"79.904",cat:"halogen",per:4,grp:17,cfg:"[Ar] 3d¹⁰ 4s² 4p⁵",en:2.96,mp:-7.2,bp:58.8,dens:3.103,disc:"A.J. Balard",yr:1825},
+  {n:36,s:"Kr",name:"Krypton",mass:"83.798",cat:"noble-gas",per:4,grp:18,cfg:"[Ar] 3d¹⁰ 4s² 4p⁶",en:3.00,mp:-157.36,bp:-153.22,dens:0.00375,disc:"William Ramsay",yr:1898},
+  {n:37,s:"Rb",name:"Rubidium",mass:"85.468",cat:"alkali-metal",per:5,grp:1,cfg:"[Kr] 5s¹",en:0.82,mp:39.31,bp:688,dens:1.532,disc:"Robert Bunsen",yr:1861},
+  {n:38,s:"Sr",name:"Strontium",mass:"87.62",cat:"alkaline-earth",per:5,grp:2,cfg:"[Kr] 5s²",en:0.95,mp:777,bp:1382,dens:2.64,disc:"W. Cruickshank",yr:1787},
+  {n:39,s:"Y",name:"Yttrium",mass:"88.906",cat:"transition-metal",per:5,grp:3,cfg:"[Kr] 4d¹ 5s²",en:1.22,mp:1526,bp:3336,dens:4.472,disc:"Johan Gadolin",yr:1794},
+  {n:40,s:"Zr",name:"Zirconium",mass:"91.224",cat:"transition-metal",per:5,grp:4,cfg:"[Kr] 4d² 5s²",en:1.33,mp:1855,bp:4409,dens:6.52,disc:"M.H. Klaproth",yr:1789},
+  {n:41,s:"Nb",name:"Niobium",mass:"92.906",cat:"transition-metal",per:5,grp:5,cfg:"[Kr] 4d⁴ 5s¹",en:1.60,mp:2477,bp:4744,dens:8.57,disc:"Charles Hatchett",yr:1801},
+  {n:42,s:"Mo",name:"Molybdenum",mass:"95.96",cat:"transition-metal",per:5,grp:6,cfg:"[Kr] 4d⁵ 5s¹",en:2.16,mp:2623,bp:4639,dens:10.28,disc:"C.W. Scheele",yr:1778},
+  {n:43,s:"Tc",name:"Technetium",mass:"(98)",cat:"transition-metal",per:5,grp:7,cfg:"[Kr] 4d⁵ 5s²",en:1.90,mp:2157,bp:4265,dens:11.0,disc:"Carlo Perrier",yr:1937},
+  {n:44,s:"Ru",name:"Ruthenium",mass:"101.07",cat:"transition-metal",per:5,grp:8,cfg:"[Kr] 4d⁷ 5s¹",en:2.20,mp:2334,bp:4150,dens:12.37,disc:"K.E. Claus",yr:1844},
+  {n:45,s:"Rh",name:"Rhodium",mass:"102.906",cat:"transition-metal",per:5,grp:9,cfg:"[Kr] 4d⁸ 5s¹",en:2.28,mp:1964,bp:3695,dens:12.41,disc:"W.H. Wollaston",yr:1804},
+  {n:46,s:"Pd",name:"Palladium",mass:"106.42",cat:"transition-metal",per:5,grp:10,cfg:"[Kr] 4d¹⁰",en:2.20,mp:1554.9,bp:2963,dens:12.023,disc:"W.H. Wollaston",yr:1803},
+  {n:47,s:"Ag",name:"Silver",mass:"107.868",cat:"transition-metal",per:5,grp:11,cfg:"[Kr] 4d¹⁰ 5s¹",en:1.93,mp:961.78,bp:2162,dens:10.49,disc:"Ancient",yr:null},
+  {n:48,s:"Cd",name:"Cadmium",mass:"112.411",cat:"transition-metal",per:5,grp:12,cfg:"[Kr] 4d¹⁰ 5s²",en:1.69,mp:321.07,bp:767,dens:8.65,disc:"K.S.L. Hermann",yr:1817},
+  {n:49,s:"In",name:"Indium",mass:"114.818",cat:"post-transition",per:5,grp:13,cfg:"[Kr] 4d¹⁰ 5s² 5p¹",en:1.78,mp:156.60,bp:2072,dens:7.31,disc:"Ferdinand Reich",yr:1863},
+  {n:50,s:"Sn",name:"Tin",mass:"118.710",cat:"post-transition",per:5,grp:14,cfg:"[Kr] 4d¹⁰ 5s² 5p²",en:1.96,mp:231.93,bp:2602,dens:7.265,disc:"Ancient",yr:null},
+  {n:51,s:"Sb",name:"Antimony",mass:"121.760",cat:"metalloid",per:5,grp:15,cfg:"[Kr] 4d¹⁰ 5s² 5p³",en:2.05,mp:630.63,bp:1587,dens:6.697,disc:"Ancient",yr:null},
+  {n:52,s:"Te",name:"Tellurium",mass:"127.60",cat:"metalloid",per:5,grp:16,cfg:"[Kr] 4d¹⁰ 5s² 5p⁴",en:2.10,mp:449.51,bp:988,dens:6.24,disc:"F.J. Müller",yr:1782},
+  {n:53,s:"I",name:"Iodine",mass:"126.904",cat:"halogen",per:5,grp:17,cfg:"[Kr] 4d¹⁰ 5s² 5p⁵",en:2.66,mp:113.7,bp:184.3,dens:4.933,disc:"Bernard Courtois",yr:1811},
+  {n:54,s:"Xe",name:"Xenon",mass:"131.293",cat:"noble-gas",per:5,grp:18,cfg:"[Kr] 4d¹⁰ 5s² 5p⁶",en:2.60,mp:-111.75,bp:-108.09,dens:0.00589,disc:"William Ramsay",yr:1898},
+  {n:55,s:"Cs",name:"Cesium",mass:"132.905",cat:"alkali-metal",per:6,grp:1,cfg:"[Xe] 6s¹",en:0.79,mp:28.44,bp:671,dens:1.873,disc:"Robert Bunsen",yr:1860},
+  {n:56,s:"Ba",name:"Barium",mass:"137.327",cat:"alkaline-earth",per:6,grp:2,cfg:"[Xe] 6s²",en:0.89,mp:727,bp:1870,dens:3.594,disc:"C.W. Scheele",yr:1772},
+  {n:57,s:"La",name:"Lanthanum",mass:"138.905",cat:"lanthanide",per:6,grp:3,cfg:"[Xe] 5d¹ 6s²",en:1.10,mp:920,bp:3464,dens:6.162,disc:"C.G. Mosander",yr:1839},
+  {n:58,s:"Ce",name:"Cerium",mass:"140.116",cat:"lanthanide",per:6,grp:null,cfg:"[Xe] 4f¹ 5d¹ 6s²",en:1.12,mp:798,bp:3360,dens:6.770,disc:"M.H. Klaproth",yr:1803},
+  {n:59,s:"Pr",name:"Praseodymium",mass:"140.908",cat:"lanthanide",per:6,grp:null,cfg:"[Xe] 4f³ 6s²",en:1.13,mp:931,bp:3290,dens:6.77,disc:"C.A. von Welsbach",yr:1885},
+  {n:60,s:"Nd",name:"Neodymium",mass:"144.242",cat:"lanthanide",per:6,grp:null,cfg:"[Xe] 4f⁴ 6s²",en:1.14,mp:1021,bp:3074,dens:7.01,disc:"C.A. von Welsbach",yr:1885},
+  {n:61,s:"Pm",name:"Promethium",mass:"(145)",cat:"lanthanide",per:6,grp:null,cfg:"[Xe] 4f⁵ 6s²",en:1.13,mp:1042,bp:3000,dens:7.26,disc:"Chien Shiung Wu",yr:1945},
+  {n:62,s:"Sm",name:"Samarium",mass:"150.36",cat:"lanthanide",per:6,grp:null,cfg:"[Xe] 4f⁶ 6s²",en:1.17,mp:1074,bp:1794,dens:7.52,disc:"Lecoq de Boisbaudran",yr:1879},
+  {n:63,s:"Eu",name:"Europium",mass:"151.964",cat:"lanthanide",per:6,grp:null,cfg:"[Xe] 4f⁷ 6s²",en:1.20,mp:822,bp:1596,dens:5.244,disc:"É.A. Demarçay",yr:1901},
+  {n:64,s:"Gd",name:"Gadolinium",mass:"157.25",cat:"lanthanide",per:6,grp:null,cfg:"[Xe] 4f⁷ 5d¹ 6s²",en:1.20,mp:1313,bp:3273,dens:7.90,disc:"J.C.G. de Marignac",yr:1880},
+  {n:65,s:"Tb",name:"Terbium",mass:"158.925",cat:"lanthanide",per:6,grp:null,cfg:"[Xe] 4f⁹ 6s²",en:1.10,mp:1356,bp:3230,dens:8.23,disc:"C.G. Mosander",yr:1843},
+  {n:66,s:"Dy",name:"Dysprosium",mass:"162.500",cat:"lanthanide",per:6,grp:null,cfg:"[Xe] 4f¹⁰ 6s²",en:1.22,mp:1412,bp:2567,dens:8.540,disc:"Lecoq de Boisbaudran",yr:1886},
+  {n:67,s:"Ho",name:"Holmium",mass:"164.930",cat:"lanthanide",per:6,grp:null,cfg:"[Xe] 4f¹¹ 6s²",en:1.23,mp:1474,bp:2700,dens:8.79,disc:"Marc Delafontaine",yr:1878},
+  {n:68,s:"Er",name:"Erbium",mass:"167.259",cat:"lanthanide",per:6,grp:null,cfg:"[Xe] 4f¹² 6s²",en:1.24,mp:1529,bp:2868,dens:9.066,disc:"C.G. Mosander",yr:1843},
+  {n:69,s:"Tm",name:"Thulium",mass:"168.934",cat:"lanthanide",per:6,grp:null,cfg:"[Xe] 4f¹³ 6s²",en:1.25,mp:1545,bp:1950,dens:9.32,disc:"P.T. Cleve",yr:1879},
+  {n:70,s:"Yb",name:"Ytterbium",mass:"173.054",cat:"lanthanide",per:6,grp:null,cfg:"[Xe] 4f¹⁴ 6s²",en:1.10,mp:824,bp:1196,dens:6.90,disc:"J.C.G. de Marignac",yr:1878},
+  {n:71,s:"Lu",name:"Lutetium",mass:"174.967",cat:"lanthanide",per:6,grp:null,cfg:"[Xe] 4f¹⁴ 5d¹ 6s²",en:1.27,mp:1663,bp:3402,dens:9.841,disc:"Georges Urbain",yr:1907},
+  {n:72,s:"Hf",name:"Hafnium",mass:"178.49",cat:"transition-metal",per:6,grp:4,cfg:"[Xe] 4f¹⁴ 5d² 6s²",en:1.30,mp:2233,bp:4603,dens:13.31,disc:"Dirk Coster",yr:1923},
+  {n:73,s:"Ta",name:"Tantalum",mass:"180.948",cat:"transition-metal",per:6,grp:5,cfg:"[Xe] 4f¹⁴ 5d³ 6s²",en:1.50,mp:3017,bp:5458,dens:16.69,disc:"A.G. Ekeberg",yr:1802},
+  {n:74,s:"W",name:"Tungsten",mass:"183.84",cat:"transition-metal",per:6,grp:6,cfg:"[Xe] 4f¹⁴ 5d⁴ 6s²",en:2.36,mp:3422,bp:5555,dens:19.3,disc:"C.W. Scheele",yr:1781},
+  {n:75,s:"Re",name:"Rhenium",mass:"186.207",cat:"transition-metal",per:6,grp:7,cfg:"[Xe] 4f¹⁴ 5d⁵ 6s²",en:1.90,mp:3186,bp:5596,dens:21.02,disc:"Masataka Ogawa",yr:1925},
+  {n:76,s:"Os",name:"Osmium",mass:"190.23",cat:"transition-metal",per:6,grp:8,cfg:"[Xe] 4f¹⁴ 5d⁶ 6s²",en:2.20,mp:3033,bp:5012,dens:22.59,disc:"Smithson Tennant",yr:1803},
+  {n:77,s:"Ir",name:"Iridium",mass:"192.217",cat:"transition-metal",per:6,grp:9,cfg:"[Xe] 4f¹⁴ 5d⁷ 6s²",en:2.20,mp:2446,bp:4428,dens:22.56,disc:"Smithson Tennant",yr:1803},
+  {n:78,s:"Pt",name:"Platinum",mass:"195.084",cat:"transition-metal",per:6,grp:10,cfg:"[Xe] 4f¹⁴ 5d⁹ 6s¹",en:2.28,mp:1768.3,bp:3825,dens:21.45,disc:"Antonio de Ulloa",yr:1735},
+  {n:79,s:"Au",name:"Gold",mass:"196.967",cat:"transition-metal",per:6,grp:11,cfg:"[Xe] 4f¹⁴ 5d¹⁰ 6s¹",en:2.54,mp:1064.18,bp:2856,dens:19.3,disc:"Ancient",yr:null},
+  {n:80,s:"Hg",name:"Mercury",mass:"200.592",cat:"transition-metal",per:6,grp:12,cfg:"[Xe] 4f¹⁴ 5d¹⁰ 6s²",en:2.00,mp:-38.83,bp:356.73,dens:13.534,disc:"Ancient",yr:null},
+  {n:81,s:"Tl",name:"Thallium",mass:"204.383",cat:"post-transition",per:6,grp:13,cfg:"[Xe] 4f¹⁴ 5d¹⁰ 6s² 6p¹",en:1.62,mp:304,bp:1473,dens:11.85,disc:"William Crookes",yr:1861},
+  {n:82,s:"Pb",name:"Lead",mass:"207.2",cat:"post-transition",per:6,grp:14,cfg:"[Xe] 4f¹⁴ 5d¹⁰ 6s² 6p²",en:2.33,mp:327.46,bp:1749,dens:11.34,disc:"Ancient",yr:null},
+  {n:83,s:"Bi",name:"Bismuth",mass:"208.980",cat:"post-transition",per:6,grp:15,cfg:"[Xe] 4f¹⁴ 5d¹⁰ 6s² 6p³",en:2.02,mp:271.5,bp:1564,dens:9.78,disc:"C.F. Geoffroy",yr:1753},
+  {n:84,s:"Po",name:"Polonium",mass:"(209)",cat:"metalloid",per:6,grp:16,cfg:"[Xe] 4f¹⁴ 5d¹⁰ 6s² 6p⁴",en:2.0,mp:254,bp:962,dens:9.196,disc:"Marie Curie",yr:1898},
+  {n:85,s:"At",name:"Astatine",mass:"(210)",cat:"halogen",per:6,grp:17,cfg:"[Xe] 4f¹⁴ 5d¹⁰ 6s² 6p⁵",en:2.2,mp:302,bp:337,dens:7.0,disc:"Dale R. Corson",yr:1940},
+  {n:86,s:"Rn",name:"Radon",mass:"(222)",cat:"noble-gas",per:6,grp:18,cfg:"[Xe] 4f¹⁴ 5d¹⁰ 6s² 6p⁶",en:2.2,mp:-71,bp:-61.7,dens:0.00973,disc:"F.E. Dorn",yr:1900},
+  {n:87,s:"Fr",name:"Francium",mass:"(223)",cat:"alkali-metal",per:7,grp:1,cfg:"[Rn] 7s¹",en:0.7,mp:27,bp:677,dens:1.87,disc:"Marguerite Perey",yr:1939},
+  {n:88,s:"Ra",name:"Radium",mass:"(226)",cat:"alkaline-earth",per:7,grp:2,cfg:"[Rn] 7s²",en:0.9,mp:700,bp:1737,dens:5.5,disc:"Marie Curie",yr:1898},
+  {n:89,s:"Ac",name:"Actinium",mass:"(227)",cat:"actinide",per:7,grp:3,cfg:"[Rn] 6d¹ 7s²",en:1.1,mp:1050,bp:3200,dens:10.07,disc:"A.L. Debierne",yr:1899},
+  {n:90,s:"Th",name:"Thorium",mass:"232.038",cat:"actinide",per:7,grp:null,cfg:"[Rn] 6d² 7s²",en:1.3,mp:1842,bp:4788,dens:11.72,disc:"J.J. Berzelius",yr:1829},
+  {n:91,s:"Pa",name:"Protactinium",mass:"231.036",cat:"actinide",per:7,grp:null,cfg:"[Rn] 5f² 6d¹ 7s²",en:1.5,mp:1568,bp:4027,dens:15.37,disc:"Kasimir Fajans",yr:1913},
+  {n:92,s:"U",name:"Uranium",mass:"238.029",cat:"actinide",per:7,grp:null,cfg:"[Rn] 5f³ 6d¹ 7s²",en:1.38,mp:1135,bp:4131,dens:18.95,disc:"M.H. Klaproth",yr:1789},
+  {n:93,s:"Np",name:"Neptunium",mass:"(237)",cat:"actinide",per:7,grp:null,cfg:"[Rn] 5f⁴ 6d¹ 7s²",en:1.36,mp:644,bp:4000,dens:20.45,disc:"Edwin McMillan",yr:1940},
+  {n:94,s:"Pu",name:"Plutonium",mass:"(244)",cat:"actinide",per:7,grp:null,cfg:"[Rn] 5f⁶ 7s²",en:1.28,mp:640,bp:3228,dens:19.816,disc:"Glenn T. Seaborg",yr:1940},
+  {n:95,s:"Am",name:"Americium",mass:"(243)",cat:"actinide",per:7,grp:null,cfg:"[Rn] 5f⁷ 7s²",en:1.3,mp:1176,bp:2607,dens:13.67,disc:"Glenn T. Seaborg",yr:1944},
+  {n:96,s:"Cm",name:"Curium",mass:"(247)",cat:"actinide",per:7,grp:null,cfg:"[Rn] 5f⁷ 6d¹ 7s²",en:1.3,mp:1345,bp:3110,dens:13.51,disc:"Glenn T. Seaborg",yr:1944},
+  {n:97,s:"Bk",name:"Berkelium",mass:"(247)",cat:"actinide",per:7,grp:null,cfg:"[Rn] 5f⁹ 7s²",en:1.3,mp:986,bp:2627,dens:14.78,disc:"Glenn T. Seaborg",yr:1949},
+  {n:98,s:"Cf",name:"Californium",mass:"(251)",cat:"actinide",per:7,grp:null,cfg:"[Rn] 5f¹⁰ 7s²",en:1.3,mp:900,bp:1470,dens:15.1,disc:"Glenn T. Seaborg",yr:1950},
+  {n:99,s:"Es",name:"Einsteinium",mass:"(252)",cat:"actinide",per:7,grp:null,cfg:"[Rn] 5f¹¹ 7s²",en:1.3,mp:860,bp:996,dens:8.84,disc:"Albert Ghiorso",yr:1952},
+  {n:100,s:"Fm",name:"Fermium",mass:"(257)",cat:"actinide",per:7,grp:null,cfg:"[Rn] 5f¹² 7s²",en:1.3,mp:1527,bp:null,dens:null,disc:"Albert Ghiorso",yr:1952},
+  {n:101,s:"Md",name:"Mendelevium",mass:"(258)",cat:"actinide",per:7,grp:null,cfg:"[Rn] 5f¹³ 7s²",en:1.3,mp:827,bp:null,dens:null,disc:"Glenn T. Seaborg",yr:1955},
+  {n:102,s:"No",name:"Nobelium",mass:"(259)",cat:"actinide",per:7,grp:null,cfg:"[Rn] 5f¹⁴ 7s²",en:1.3,mp:827,bp:null,dens:null,disc:"JINR",yr:1966},
+  {n:103,s:"Lr",name:"Lawrencium",mass:"(266)",cat:"actinide",per:7,grp:null,cfg:"[Rn] 5f¹⁴ 7s² 7p¹",en:1.3,mp:1627,bp:null,dens:null,disc:"Albert Ghiorso",yr:1961},
+  {n:104,s:"Rf",name:"Rutherfordium",mass:"(267)",cat:"transition-metal",per:7,grp:4,cfg:"[Rn] 5f¹⁴ 6d² 7s²",en:null,mp:2100,bp:5500,dens:23.2,disc:"JINR",yr:1964},
+  {n:105,s:"Db",name:"Dubnium",mass:"(268)",cat:"transition-metal",per:7,grp:5,cfg:"[Rn] 5f¹⁴ 6d³ 7s²",en:null,mp:null,bp:null,dens:29.3,disc:"JINR",yr:1968},
+  {n:106,s:"Sg",name:"Seaborgium",mass:"(269)",cat:"transition-metal",per:7,grp:6,cfg:"[Rn] 5f¹⁴ 6d⁴ 7s²",en:null,mp:null,bp:null,dens:35.0,disc:"Albert Ghiorso",yr:1974},
+  {n:107,s:"Bh",name:"Bohrium",mass:"(270)",cat:"transition-metal",per:7,grp:7,cfg:"[Rn] 5f¹⁴ 6d⁵ 7s²",en:null,mp:null,bp:null,dens:37.1,disc:"GSI",yr:1981},
+  {n:108,s:"Hs",name:"Hassium",mass:"(277)",cat:"transition-metal",per:7,grp:8,cfg:"[Rn] 5f¹⁴ 6d⁶ 7s²",en:null,mp:null,bp:null,dens:40.7,disc:"GSI",yr:1984},
+  {n:109,s:"Mt",name:"Meitnerium",mass:"(278)",cat:"transition-metal",per:7,grp:9,cfg:"[Rn] 5f¹⁴ 6d⁷ 7s²",en:null,mp:null,bp:null,dens:37.4,disc:"GSI",yr:1982},
+  {n:110,s:"Ds",name:"Darmstadtium",mass:"(281)",cat:"transition-metal",per:7,grp:10,cfg:"[Rn] 5f¹⁴ 6d⁸ 7s²",en:null,mp:null,bp:null,dens:34.8,disc:"GSI",yr:1994},
+  {n:111,s:"Rg",name:"Roentgenium",mass:"(282)",cat:"transition-metal",per:7,grp:11,cfg:"[Rn] 5f¹⁴ 6d⁹ 7s²",en:null,mp:null,bp:null,dens:28.7,disc:"GSI",yr:1994},
+  {n:112,s:"Cn",name:"Copernicium",mass:"(285)",cat:"transition-metal",per:7,grp:12,cfg:"[Rn] 5f¹⁴ 6d¹⁰ 7s²",en:null,mp:null,bp:null,dens:23.7,disc:"GSI",yr:1996},
+  {n:113,s:"Nh",name:"Nihonium",mass:"(286)",cat:"post-transition",per:7,grp:13,cfg:"[Rn] 5f¹⁴ 6d¹⁰ 7s² 7p¹",en:null,mp:430,bp:1130,dens:16.0,disc:"RIKEN",yr:2004},
+  {n:114,s:"Fl",name:"Flerovium",mass:"(289)",cat:"post-transition",per:7,grp:14,cfg:"[Rn] 5f¹⁴ 6d¹⁰ 7s² 7p²",en:null,mp:null,bp:null,dens:14.0,disc:"JINR",yr:1999},
+  {n:115,s:"Mc",name:"Moscovium",mass:"(290)",cat:"post-transition",per:7,grp:15,cfg:"[Rn] 5f¹⁴ 6d¹⁰ 7s² 7p³",en:null,mp:400,bp:1100,dens:13.5,disc:"JINR",yr:2003},
+  {n:116,s:"Lv",name:"Livermorium",mass:"(293)",cat:"post-transition",per:7,grp:16,cfg:"[Rn] 5f¹⁴ 6d¹⁰ 7s² 7p⁴",en:null,mp:364,bp:762,dens:12.9,disc:"JINR",yr:2000},
+  {n:117,s:"Ts",name:"Tennessine",mass:"(294)",cat:"halogen",per:7,grp:17,cfg:"[Rn] 5f¹⁴ 6d¹⁰ 7s² 7p⁵",en:null,mp:700,bp:883,dens:7.17,disc:"JINR",yr:2010},
+  {n:118,s:"Og",name:"Oganesson",mass:"(294)",cat:"noble-gas",per:7,grp:18,cfg:"[Rn] 5f¹⁴ 6d¹⁰ 7s² 7p⁶",en:null,mp:null,bp:null,dens:4.95,disc:"JINR",yr:2002}
+];
+
+function getPos(el){
+  if(el.cat==="lanthanide"&&el.n>=57&&el.n<=71) return{row:9,col:el.n-57+4};
+  if(el.cat==="actinide"&&el.n>=89&&el.n<=103) return{row:10,col:el.n-89+4};
+  if(el.grp) return{row:el.per,col:el.grp};
+  return null;
+}
+
+let activeFilter=null, selectedEl=null;
+
+function buildCatButtons(){
+  const wrap=document.getElementById('cat-buttons');
+  Object.entries(CAT).forEach(([key,val])=>{
+    const btn=document.createElement('button');
+    btn.className='cat-btn'; btn.id='cat-'+key; btn.style.color=val.color;
+    btn.innerHTML=`<span class="dot" style="background:${val.color}"></span>${val.label}`;
+    btn.onclick=()=>{
+      activeFilter=activeFilter===key?null:key;
+      document.querySelectorAll('.cat-btn').forEach(b=>b.classList.remove('active'));
+      if(activeFilter) btn.classList.add('active');
+      applyFilters();
+    };
+    wrap.appendChild(btn);
+  });
+}
+
+function buildGrid(){
+  const grid=document.getElementById('grid');
+  for(let p=1;p<=7;p++){
+    const lbl=document.createElement('div');
+    lbl.className='period-lbl'; lbl.style.gridRow=p; lbl.style.gridColumn=19;
+    lbl.textContent='P'+p; grid.appendChild(lbl);
+  }
+  const ln=document.createElement('div');
+  ln.className='series-lbl'; ln.style.gridRow=9; ln.style.gridColumn='1/3';
+  ln.style.color=CAT['lanthanide'].color+'99'; ln.innerHTML='Ln<br>series'; grid.appendChild(ln);
+  const ac=document.createElement('div');
+  ac.className='series-lbl'; ac.style.gridRow=10; ac.style.gridColumn='1/3';
+  ac.style.color=CAT['actinide'].color+'99'; ac.innerHTML='Ac<br>series'; grid.appendChild(ac);
+  [{row:6,col:3,cat:'lanthanide',txt:'57–71'},{row:7,col:3,cat:'actinide',txt:'89–103'}].forEach(p=>{
+    const ph=document.createElement('div'); ph.className='placeholder';
+    ph.style.gridRow=p.row; ph.style.gridColumn=p.col;
+    ph.style.border=`1px dashed ${CAT[p.cat].color}44`; ph.style.color=CAT[p.cat].color+'77';
+    ph.style.fontSize='8px'; ph.textContent=p.txt; grid.appendChild(ph);
+  });
+  EL.forEach(el=>{
+    const pos=getPos(el); if(!pos) return;
+    const c=CAT[el.cat];
+    const cell=document.createElement('div');
+    cell.className='cell'; cell.id='el-'+el.n; cell.dataset.n=el.n;
+    cell.style.gridRow=pos.row; cell.style.gridColumn=pos.col;
+    cell.style.background=c.bg; cell.style.borderColor=c.color+'55'; cell.style.color=c.color;
+    cell.innerHTML=`<span class="num">${el.n}</span><span class="sym">${el.s}</span><span class="nam">${el.name}</span>`;
+    cell.onclick=()=>selectElement(el);
+    cell.onmouseenter=()=>hoverElement(el);
+    cell.onmouseleave=()=>hoverElement(null);
+    grid.appendChild(cell);
+  });
+}
+
+function buildFooter(){
+  const footer=document.getElementById('footer');
+  Object.entries(CAT).forEach(([key,val])=>{
+    const count=EL.filter(e=>e.cat===key).length;
+    const item=document.createElement('div'); item.className='footer-item';
+    item.innerHTML=`<span class="dot" style="background:${val.color};border-radius:1px"></span>${val.label}: <strong style="color:${val.color}">${count}</strong>`;
+    footer.appendChild(item);
+  });
+}
+
+function applyFilters(){
+  const search=document.getElementById('search').value.toLowerCase().trim();
+  document.getElementById('clear-btn').style.display=(activeFilter||search)?'block':'none';
+  EL.forEach(el=>{
+    const cell=document.getElementById('el-'+el.n); if(!cell) return;
+    const mc=!activeFilter||el.cat===activeFilter;
+    const ms=!search||el.name.toLowerCase().includes(search)||el.s.toLowerCase().includes(search)||String(el.n).includes(search);
+    cell.classList.toggle('dimmed',!mc||!ms);
+  });
+}
+
+function clearAll(){
+  activeFilter=null; document.getElementById('search').value='';
+  document.querySelectorAll('.cat-btn').forEach(b=>b.classList.remove('active'));
+  applyFilters();
+}
+
+function selectElement(el){
+  if(selectedEl?.n===el.n){
+    selectedEl=null;
+    document.querySelectorAll('.cell').forEach(c=>c.classList.remove('selected'));
+    showEmptyPanel(); return;
+  }
+  selectedEl=el;
+  document.querySelectorAll('.cell').forEach(c=>c.classList.remove('selected'));
+  const cell=document.getElementById('el-'+el.n);
+  if(cell) cell.classList.add('selected');
+  showPanel(el);
+}
+
+function hoverElement(el){
+  if(selectedEl) return;
+  const preview=document.getElementById('hover-preview');
+  if(!preview) return;
+  if(!el){preview.innerHTML='';return;}
+  const c=CAT[el.cat];
+  preview.innerHTML=`<div class="hover-tag" style="background:${c.bg};border:1px solid ${c.color}55;color:${c.color}">${el.s} — ${el.name}</div>`;
+}
+
+function fmt(val,unit){ return val!=null?val+' '+unit:'—'; }
+
+function row(label,val){ return `<div><div class="panel-lbl">${label.toUpperCase()}</div><div class="panel-val">${val}</div></div>`; }
+
+function showEmptyPanel(){
+  document.getElementById('panel').innerHTML=`
+    <div class="panel-empty">
+      <div class="panel-icon">⚛</div>
+      <div class="panel-hint">Click any element<br>to view its properties</div>
+      <div id="hover-preview"></div>
+    </div>`;
+}
+
+function showPanel(el){
+  const c=CAT[el.cat];
+  document.getElementById('panel').innerHTML=`
+    <div class="panel-bar" style="background:${c.color}"></div>
+    <div class="panel-body">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <div class="panel-sym" style="color:${c.color}">${el.s}</div>
+          <div class="panel-name">${el.name}</div>
+          <div class="panel-z">Z = ${el.n}</div>
+        </div>
+        <div style="font-family:'Orbitron',monospace;font-size:16px;font-weight:700;color:${c.color};opacity:0.5">#${el.n}</div>
+      </div>
+      <div class="panel-tag" style="background:${c.bg};color:${c.color}">${c.label}</div>
+      <div class="panel-grid">
+        ${row('Atomic Mass',el.mass+' u')}
+        ${row('Period',el.per)}
+        ${row('Group',el.grp||'—')}
+        ${row('Config',el.cfg)}
+        ${row('Electronegativity',el.en??'—')}
+        ${row('Melting Pt',fmt(el.mp,'°C'))}
+        ${row('Boiling Pt',fmt(el.bp,'°C'))}
+        ${row('Density',el.dens!=null?el.dens+' g/cm³':'—')}
+      </div>
+      <div class="panel-disc">
+        <div class="panel-lbl">DISCOVERED BY</div>
+        <div class="panel-val" style="margin-top:2px">${el.disc}</div>
+        <div style="font-size:10px;color:rgba(255,255,255,0.4);margin-top:2px">${el.yr??'Known since antiquity'}</div>
+      </div>
+    </div>`;
+}
+
+buildCatButtons();
+buildGrid();
+buildFooter();
+</script>
+</body>
+</html>
