@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>bstef.pages.dev</title>
+<style>
+  :root {
+    --bg: #0a0e14;
+    --grid: rgba(255,255,255,0.04);
+    --accent: #5eead4;
+    --text: #e5e7eb;
+    --muted: #6b7280;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    height: 100%;
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  body {
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 40px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .card {
+    max-width: 560px;
+    width: 100%;
+    text-align: center;
+  }
+  .tag {
+    display: inline-block;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 13px;
+    color: var(--accent);
+    border: 1px solid rgba(94,234,212,0.3);
+    background: rgba(94,234,212,0.06);
+    padding: 5px 12px;
+    border-radius: 999px;
+    margin-bottom: 22px;
+  }
+  h1 {
+    font-size: 44px;
+    line-height: 1.15;
+    margin: 0 0 14px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  h1 span { color: var(--accent); }
+  p.sub {
+    color: var(--muted);
+    font-size: 16px;
+    line-height: 1.6;
+    margin: 0 0 32px;
+  }
+  .prompt {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 14px;
+    color: var(--muted);
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px;
+    padding: 14px 18px;
+    text-align: left;
+  }
+  .prompt .line { margin: 0; }
+  .prompt .prefix { color: var(--accent); }
+  footer {
+    margin-top: 36px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  footer a {
+    color: var(--muted);
+    text-decoration: none;
+    border-bottom: 1px solid rgba(255,255,255,0.15);
+  }
+  footer a:hover { color: var(--accent); border-color: var(--accent); }
+</style>
+</head>
+<body>
+  <div class="card">
+    <span class="tag">● bstef.pages.dev</span>
+    <h1>A small corner of the <span>internet</span>, hosting whatever I build.</h1>
+    <p class="sub">This index sits at the root while individual pages and experiments live at their own paths.</p>
+    <div class="prompt">
+      <p class="line"><span class="prefix">$</span> ls ./pages</p>
+      <p class="line">perodic.html</p>
+      <p class="line" style="color: rgba(255,255,255,0.2);">// more coming soon</p>
+    </div>
+    <footer>
+      <a href="https://bstef.com">bstef.com</a> · <a href="https://github.com/bstef/bstefcf">source</a>
+    </footer>
+  </div>
+</body>
+</html>
