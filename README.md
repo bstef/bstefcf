@@ -11,7 +11,8 @@ This repo is deployed automatically to Cloudflare Pages on every push to `main`.
 | Path | Description |
 |------|--------------|
 | `index.html` | Landing page |
-| `perodic.html` | *(add a short description here)* |
+| `perodic.html` | interactive periodic table |
+| `qr.html` | QR Code Generator |
 
 ## Adding a new page
 
