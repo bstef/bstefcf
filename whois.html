@@ -1,0 +1,1261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WHOIS Spam Investigator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c10;
+    --surface: #111318;
+    --surface2: #1a1d26;
+    --border: #252836;
+    --accent: #00ff9d;
+    --accent2: #ff3f6c;
+    --accent3: #7b5ea7;
+    --text: #e2e8f0;
+    --muted: #6b7280;
+    --warn: #f59e0b;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,255,157,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,255,157,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 40px 20px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Header */
+  header {
+    margin-bottom: 40px;
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .logo-icon {
+    width: 48px;
+    height: 48px;
+    background: var(--accent);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    flex-shrink: 0;
+    margin-top: 4px;
+    box-shadow: 0 0 30px rgba(0,255,157,0.3);
+  }
+
+  h1 {
+    font-size: 2.4rem;
+    font-weight: 800;
+    letter-spacing: -1px;
+    line-height: 1.1;
+  }
+
+  h1 span { color: var(--accent); }
+
+  .subtitle {
+    color: var(--muted);
+    font-size: 0.9rem;
+    font-family: 'Space Mono', monospace;
+    margin-top: 4px;
+  }
+
+  /* Tabs */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 24px;
+    background: var(--surface);
+    padding: 4px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+  }
+
+  .tab {
+    flex: 1;
+    padding: 10px 16px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+    border-radius: 7px;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.5px;
+  }
+
+  .tab.active {
+    background: var(--surface2);
+    color: var(--accent);
+    box-shadow: inset 0 0 0 1px rgba(0,255,157,0.2);
+  }
+
+  .tab:hover:not(.active) { color: var(--text); }
+
+  /* Panel */
+  .panel { display: none; }
+  .panel.active { display: block; animation: fadeIn 0.3s ease; }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* Search box */
+  .search-box {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .input-wrap {
+    flex: 1;
+    position: relative;
+  }
+
+  .input-icon {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted);
+    font-size: 16px;
+    pointer-events: none;
+  }
+
+  input[type="text"] {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.9rem;
+    padding: 14px 14px 14px 42px;
+    border-radius: 10px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  input[type="text"]:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(0,255,157,0.1);
+  }
+
+  input::placeholder { color: var(--muted); }
+
+  .btn {
+    padding: 14px 24px;
+    background: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: 10px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+
+  .btn:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(0,255,157,0.35); }
+  .btn:active { transform: translateY(0); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+  .btn-secondary {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    box-shadow: none;
+  }
+  .btn-secondary:hover { background: var(--border); box-shadow: none; }
+
+  .btn-danger {
+    background: var(--accent2);
+    color: #fff;
+  }
+
+  /* Cards */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    font-weight: 700;
+    font-size: 0.9rem;
+  }
+
+  .card-body { padding: 20px; }
+
+  /* Result display */
+  .result-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  @media (max-width: 600px) { .result-grid { grid-template-columns: 1fr; } }
+
+  .result-item {
+    background: var(--surface2);
+    border-radius: 8px;
+    padding: 12px 16px;
+  }
+
+  .result-label {
+    font-size: 0.7rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-family: 'Space Mono', monospace;
+    margin-bottom: 4px;
+  }
+
+  .result-value {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85rem;
+    word-break: break-all;
+  }
+
+  .result-item.full { grid-column: 1 / -1; }
+
+  /* Risk badge */
+  .risk-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    font-family: 'Space Mono', monospace;
+    letter-spacing: 0.5px;
+  }
+
+  .risk-high { background: rgba(255,63,108,0.15); color: var(--accent2); border: 1px solid rgba(255,63,108,0.3); }
+  .risk-medium { background: rgba(245,158,11,0.15); color: var(--warn); border: 1px solid rgba(245,158,11,0.3); }
+  .risk-low { background: rgba(0,255,157,0.1); color: var(--accent); border: 1px solid rgba(0,255,157,0.25); }
+  .risk-unknown { background: rgba(107,114,128,0.15); color: var(--muted); border: 1px solid rgba(107,114,128,0.3); }
+
+  /* Dot indicators */
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+  .dot-red { background: var(--accent2); box-shadow: 0 0 6px var(--accent2); }
+  .dot-yellow { background: var(--warn); box-shadow: 0 0 6px var(--warn); }
+  .dot-green { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+  .dot-gray { background: var(--muted); }
+
+  /* Loading spinner */
+  .spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    display: inline-block;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Status message */
+  .status {
+    padding: 14px 18px;
+    border-radius: 10px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.83rem;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .status-info { background: rgba(123,94,167,0.15); border: 1px solid rgba(123,94,167,0.3); color: #c4b5fd; }
+  .status-success { background: rgba(0,255,157,0.08); border: 1px solid rgba(0,255,157,0.2); color: var(--accent); }
+  .status-error { background: rgba(255,63,108,0.1); border: 1px solid rgba(255,63,108,0.25); color: var(--accent2); }
+  .status-warn { background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.25); color: var(--warn); }
+
+  /* History list */
+  .history-list { display: flex; flex-direction: column; gap: 8px; }
+
+  .history-item {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+
+  .history-item:hover { border-color: var(--accent); }
+
+  .history-domain {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85rem;
+    font-weight: 700;
+  }
+
+  .history-meta {
+    font-size: 0.75rem;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+  }
+
+  .history-actions { display: flex; gap: 8px; align-items: center; }
+
+  /* Bulk paste area */
+  textarea {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.83rem;
+    padding: 14px;
+    border-radius: 10px;
+    outline: none;
+    resize: vertical;
+    min-height: 120px;
+    transition: border-color 0.2s;
+    line-height: 1.6;
+  }
+
+  textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,255,157,0.08); }
+  textarea::placeholder { color: var(--muted); }
+
+  /* Bulk results table */
+  .bulk-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+  }
+
+  .bulk-table th {
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    font-size: 0.7rem;
+  }
+
+  .bulk-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(37,40,54,0.5);
+  }
+
+  .bulk-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+  .bulk-table tr.row-high td { border-left: 2px solid var(--accent2); }
+  .bulk-table tr.row-medium td { border-left: 2px solid var(--warn); }
+  .bulk-table tr.row-low td { border-left: 2px solid var(--accent); }
+
+  /* Gmail info box */
+  .info-box {
+    background: linear-gradient(135deg, rgba(123,94,167,0.08), rgba(0,255,157,0.05));
+    border: 1px solid rgba(123,94,167,0.25);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+
+  .info-box h3 {
+    font-size: 1rem;
+    margin-bottom: 8px;
+    color: #c4b5fd;
+  }
+
+  .info-box p {
+    font-size: 0.85rem;
+    color: var(--muted);
+    line-height: 1.7;
+    margin-bottom: 12px;
+  }
+
+  .step-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .step-list li {
+    display: flex;
+    gap: 12px;
+    font-size: 0.83rem;
+    color: var(--text);
+    line-height: 1.5;
+  }
+
+  .step-num {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: rgba(0,255,157,0.15);
+    color: var(--accent);
+    font-size: 0.7rem;
+    font-family: 'Space Mono', monospace;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border: 1px solid rgba(0,255,157,0.3);
+    margin-top: 2px;
+  }
+
+  /* Empty state */
+  .empty-state {
+    text-align: center;
+    padding: 48px 20px;
+    color: var(--muted);
+  }
+
+  .empty-icon { font-size: 48px; margin-bottom: 12px; opacity: 0.4; }
+  .empty-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 6px; color: var(--text); opacity: 0.5; }
+
+  /* Progress bar */
+  .progress-bar {
+    height: 4px;
+    background: var(--surface2);
+    border-radius: 2px;
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), #00c9ff);
+    border-radius: 2px;
+    transition: width 0.3s;
+    box-shadow: 0 0 8px rgba(0,255,157,0.5);
+  }
+
+  .tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-family: 'Space Mono', monospace;
+    font-weight: 700;
+  }
+
+  .tag-new { background: rgba(0,255,157,0.1); color: var(--accent); }
+  .tag-old { background: rgba(107,114,128,0.1); color: var(--muted); }
+
+  .section-title {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    margin-bottom: 12px;
+  }
+
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 20px 0;
+  }
+
+  /* MX / DNS check result */
+  .dns-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 10px;
+    margin-top: 16px;
+  }
+
+  .dns-item {
+    background: var(--surface2);
+    border-radius: 8px;
+    padding: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .dns-item .check-icon {
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  .dns-label { font-size: 0.75rem; color: var(--muted); }
+  .dns-value { font-size: 0.85rem; font-family: 'Space Mono', monospace; margin-top: 2px; }
+
+  code {
+    background: var(--surface2);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.82em;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="logo-icon">🔍</div>
+    <div>
+      <h1>WHOIS <span>Spam</span> Investigator</h1>
+      <div class="subtitle">// domain intelligence & spam analysis tool</div>
+    </div>
+  </header>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('single')">🔎 Single Lookup</button>
+    <button class="tab" onclick="switchTab('bulk')">📋 Bulk Check</button>
+    <button class="tab" onclick="switchTab('gmail')">📧 Gmail Integration</button>
+    <button class="tab" onclick="switchTab('history')">🕒 History</button>
+  </div>
+
+  <!-- SINGLE LOOKUP TAB -->
+  <div class="panel active" id="tab-single">
+    <div class="search-box">
+      <div class="input-wrap">
+        <span class="input-icon">🌐</span>
+        <input type="text" id="single-input" placeholder="Enter domain or email (e.g. spammer.com or user@example.com)" onkeydown="if(event.key==='Enter') doSingleLookup()">
+      </div>
+      <button class="btn" id="single-btn" onclick="doSingleLookup()">Investigate</button>
+    </div>
+
+    <div id="single-status"></div>
+    <div id="single-result"></div>
+  </div>
+
+  <!-- BULK CHECK TAB -->
+  <div class="panel" id="tab-bulk">
+    <div class="card">
+      <div class="card-header">📋 Paste Emails or Domains</div>
+      <div class="card-body">
+        <textarea id="bulk-input" placeholder="Paste one email or domain per line:&#10;spammer@evil.com&#10;phishing-site.net&#10;fake-bank.org&#10;user@suspicious.ru"></textarea>
+        <div style="display:flex;gap:10px;margin-top:12px;">
+          <button class="btn" onclick="doBulkCheck()">🔍 Check All</button>
+          <button class="btn btn-secondary" onclick="document.getElementById('bulk-input').value=''">Clear</button>
+          <button class="btn btn-secondary" onclick="exportBulkCSV()">⬇ Export CSV</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="bulk-status"></div>
+    <div id="bulk-progress" style="display:none">
+      <div class="progress-bar"><div class="progress-fill" id="bulk-prog-fill" style="width:0%"></div></div>
+      <div id="bulk-prog-text" style="font-size:0.78rem;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:12px;"></div>
+    </div>
+    <div id="bulk-result"></div>
+  </div>
+
+  <!-- GMAIL TAB -->
+  <div class="panel" id="tab-gmail">
+    <div class="info-box">
+      <h3>📧 Gmail Spam Folder Integration</h3>
+      <p>Connecting directly to Gmail requires OAuth 2.0 authentication — this can't be done entirely in a browser app without a backend server due to Google's security policies. Here's how to get it working:</p>
+      <ol class="step-list">
+        <li><span class="step-num">1</span><span>Go to <strong>Google Cloud Console</strong> → Create a project → Enable <strong>Gmail API</strong></span></li>
+        <li><span class="step-num">2</span><span>Create OAuth 2.0 credentials (Web Application type) and set <code>http://localhost</code> as authorized origin</span></li>
+        <li><span class="step-num">3</span><span>Copy your <strong>Client ID</strong> below and click Connect — this app will read your spam folder senders</span></li>
+        <li><span class="step-num">4</span><span>All lookups happen locally in your browser. Nothing is sent to any external server except public WHOIS APIs.</span></li>
+      </ol>
+    </div>
+
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-header">🔑 Google OAuth Configuration</div>
+      <div class="card-body">
+        <div style="display:flex;gap:12px;margin-bottom:12px;">
+          <div class="input-wrap" style="flex:1">
+            <span class="input-icon">🔑</span>
+            <input type="text" id="gmail-client-id" placeholder="Paste your Google OAuth Client ID here..." style="padding-left:42px;">
+          </div>
+          <button class="btn" id="gmail-connect-btn" onclick="connectGmail()">Connect Gmail</button>
+        </div>
+        <div id="gmail-auth-status"></div>
+      </div>
+    </div>
+
+    <div id="gmail-panel" style="display:none">
+      <div style="display:flex;gap:12px;margin-bottom:16px;align-items:center;flex-wrap:wrap;">
+        <select id="gmail-limit" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:8px;font-family:'Space Mono',monospace;font-size:0.83rem;outline:none;">
+          <option value="20">Last 20 spam emails</option>
+          <option value="50">Last 50 spam emails</option>
+          <option value="100">Last 100 spam emails</option>
+        </select>
+        <button class="btn" onclick="fetchSpamSenders()">📨 Fetch Spam Senders</button>
+        <button class="btn btn-secondary" onclick="disconnectGmail()">Disconnect</button>
+      </div>
+      <div id="gmail-status"></div>
+      <div id="gmail-result"></div>
+    </div>
+  </div>
+
+  <!-- HISTORY TAB -->
+  <div class="panel" id="tab-history">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <div class="section-title">Lookup History</div>
+      <button class="btn btn-secondary" style="padding:8px 14px;font-size:0.8rem;" onclick="clearHistory()">🗑 Clear All</button>
+    </div>
+    <div id="history-list"></div>
+  </div>
+
+</div>
+
+<script>
+// ─── State ───────────────────────────────────────────────────────
+let history = JSON.parse(localStorage.getItem('whois_history') || '[]');
+let bulkResults = [];
+let gmailToken = null;
+let gmailClientId = null;
+
+// ─── Tabs ────────────────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+  if (name === 'history') renderHistory();
+}
+
+// ─── Domain extraction ───────────────────────────────────────────
+function extractDomain(input) {
+  input = input.trim().toLowerCase();
+  if (!input) return null;
+  // Email?
+  if (input.includes('@')) {
+    const parts = input.split('@');
+    return parts[parts.length - 1].replace(/[^a-z0-9.-]/g, '');
+  }
+  // URL?
+  try {
+    if (input.startsWith('http')) return new URL(input).hostname;
+  } catch(e) {}
+  // Plain domain
+  return input.replace(/[^a-z0-9.-]/g, '');
+}
+
+function isValidDomain(domain) {
+  return /^[a-z0-9][a-z0-9-]{0,61}[a-z0-9]?\.[a-z]{2,}$/i.test(domain);
+}
+
+// ─── WHOIS Lookup (via public API) ───────────────────────────────
+async function fetchWhois(domain) {
+  // Use rdap (free, no key needed) then fall back to whois.arin.net style
+  try {
+    const rdapRes = await fetch(`https://rdap.org/domain/${domain}`, { signal: AbortSignal.timeout(8000) });
+    if (rdapRes.ok) {
+      const data = await rdapRes.json();
+      return parseRdap(data, domain);
+    }
+  } catch(e) {}
+
+  // Fallback: whoisjson.com (free tier)
+  try {
+    const res = await fetch(`https://whoisjsonapi.com/v1/${domain}`, {
+      signal: AbortSignal.timeout(8000),
+      headers: { 'Accept': 'application/json' }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return parseWhoisJson(data, domain);
+    }
+  } catch(e) {}
+
+  return { domain, error: 'WHOIS lookup failed (rate limit or unavailable)' };
+}
+
+function parseRdap(data, domain) {
+  const result = { domain, raw: data };
+
+  // Dates
+  for (const ev of (data.events || [])) {
+    if (ev.eventAction === 'registration') result.created = ev.eventDate;
+    if (ev.eventAction === 'expiration') result.expires = ev.eventDate;
+    if (ev.eventAction === 'last changed') result.updated = ev.eventDate;
+  }
+
+  // Registrar
+  for (const e of (data.entities || [])) {
+    if ((e.roles || []).includes('registrar') && e.vcardArray) {
+      for (const v of e.vcardArray[1] || []) {
+        if (v[0] === 'fn') result.registrar = v[3];
+      }
+    }
+    if ((e.roles || []).includes('registrant') && e.vcardArray) {
+      for (const v of e.vcardArray[1] || []) {
+        if (v[0] === 'fn') result.registrant = v[3];
+        if (v[0] === 'adr') result.registrantCountry = v[1]?.cc || (v[3] || []).slice(-1)[0];
+      }
+    }
+  }
+
+  // Nameservers
+  result.nameservers = (data.nameservers || []).map(n => n.ldhName || n.unicodeName).filter(Boolean);
+
+  // Status
+  result.status = (data.status || []).join(', ');
+
+  // TLD
+  result.tld = domain.split('.').slice(-1)[0];
+
+  // Risk assessment
+  result.risk = assessRisk(result);
+
+  return result;
+}
+
+function parseWhoisJson(data, domain) {
+  const d = data.WhoisRecord || data;
+  return {
+    domain,
+    created: d.createdDate || d.creation_date,
+    expires: d.expiresDate || d.expiry_date,
+    updated: d.updatedDate || d.updated_date,
+    registrar: d.registrarName || d.registrar,
+    registrant: d.registrant?.organization || d.registrant?.name,
+    registrantCountry: d.registrant?.country,
+    nameservers: [].concat(d.nameServers?.hostNames || d.name_servers || []),
+    status: [].concat(d.status || []).join(', '),
+    tld: domain.split('.').slice(-1)[0],
+    risk: null,
+    raw: data
+  };
+}
+
+// ─── Risk Assessment ─────────────────────────────────────────────
+const RISKY_TLDS = ['ru','tk','ml','ga','cf','gq','xyz','top','click','link','site','online','pw','cc','ws','biz','info'];
+const RISKY_REGISTRARS = ['namecheap','godaddy','namesilo']; // legit but often abused
+const SPAM_REGISTRARS = ['enom','publicdomainregistry','pdr ltd'];
+const PRIVACY_KEYWORDS = ['privacy', 'whoisguard', 'withheld', 'redacted', 'protection', 'domains by proxy'];
+
+function assessRisk(info) {
+  let score = 0;
+  const flags = [];
+
+  // New domain (< 1 year)
+  if (info.created) {
+    const age = (Date.now() - new Date(info.created)) / (1000 * 60 * 60 * 24 * 365);
+    if (age < 0.25) { score += 40; flags.push('⚠️ Domain < 3 months old'); }
+    else if (age < 1) { score += 25; flags.push('⚠️ Domain < 1 year old'); }
+    else if (age < 2) { score += 10; flags.push('Domain < 2 years old'); }
+    info.ageYears = Math.round(age * 10) / 10;
+  } else {
+    score += 15;
+    flags.push('? Registration date hidden');
+  }
+
+  // Risky TLD
+  if (RISKY_TLDS.includes(info.tld)) { score += 30; flags.push(`⚠️ Risky TLD (.${info.tld})`); }
+
+  // Privacy protection on registrant
+  const regStr = (info.registrant || '').toLowerCase();
+  if (PRIVACY_KEYWORDS.some(k => regStr.includes(k))) { score += 15; flags.push('Privacy protection on registrant'); }
+
+  // Expiring soon
+  if (info.expires) {
+    const daysLeft = (new Date(info.expires) - Date.now()) / (1000 * 60 * 60 * 24);
+    if (daysLeft < 30 && daysLeft > 0) { score += 10; flags.push('⚠️ Expires very soon'); }
+  }
+
+  // Status check
+  if (info.status && info.status.includes('clientHold')) { score += 35; flags.push('🚨 Domain on clientHold'); }
+
+  const level = score >= 50 ? 'high' : score >= 25 ? 'medium' : 'low';
+  return { score, level, flags };
+}
+
+// ─── DNS / MX Checks ─────────────────────────────────────────────
+async function fetchDnsChecks(domain) {
+  const results = {};
+  const apis = [
+    { key: 'dns', label: 'A Record', url: `https://dns.google/resolve?name=${domain}&type=A` },
+    { key: 'mx', label: 'MX Record', url: `https://dns.google/resolve?name=${domain}&type=MX` },
+    { key: 'txt', label: 'SPF/DMARC', url: `https://dns.google/resolve?name=${domain}&type=TXT` },
+    { key: 'dmarc', label: 'DMARC', url: `https://dns.google/resolve?name=_dmarc.${domain}&type=TXT` }
+  ];
+
+  await Promise.all(apis.map(async a => {
+    try {
+      const r = await fetch(a.url, { signal: AbortSignal.timeout(5000) });
+      if (r.ok) {
+        const j = await r.json();
+        results[a.key] = { ok: !!(j.Answer && j.Answer.length), data: j.Answer };
+      }
+    } catch(e) { results[a.key] = { ok: false }; }
+  }));
+
+  return results;
+}
+
+// ─── Render Results ───────────────────────────────────────────────
+function renderResult(info, dns) {
+  if (info.error) {
+    return `<div class="status status-error">❌ ${info.error} — trying DNS checks only...</div>`;
+  }
+
+  const risk = info.risk;
+  const riskLabel = risk ? `<span class="risk-badge risk-${risk.level}"><span class="dot dot-${risk.level==='high'?'red':risk.level==='medium'?'yellow':'green'}"></span>${risk.level.toUpperCase()} RISK (${risk.score})</span>` : '';
+
+  const fmtDate = d => {
+    if (!d) return '—';
+    try { return new Date(d).toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' }); }
+    catch(e) { return d; }
+  };
+
+  const ageTag = info.ageYears !== undefined
+    ? (info.ageYears < 1 ? `<span class="tag tag-new">NEW</span>` : `<span class="tag tag-old">${info.ageYears}y old</span>`)
+    : '';
+
+  const flagsHtml = risk && risk.flags.length
+    ? risk.flags.map(f => `<li style="font-size:0.82rem;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-family:'Space Mono',monospace;color:${f.includes('🚨')?'var(--accent2)':f.includes('⚠️')?'var(--warn)':'var(--muted)'}">${f}</li>`).join('')
+    : '<li style="color:var(--muted);font-size:0.82rem;font-family:Space Mono,monospace">No major risk flags detected</li>';
+
+  // DNS checks HTML
+  let dnsHtml = '';
+  if (dns) {
+    const checks = [
+      { label: 'A Record', key: 'dns', icon: dns.dns?.ok ? '✅' : '❌', value: dns.dns?.ok ? 'Resolves' : 'No record' },
+      { label: 'MX Record', key: 'mx', icon: dns.mx?.ok ? '✅' : '⚠️', value: dns.mx?.ok ? `${dns.mx.data?.length || 0} server(s)` : 'No mail server' },
+      { label: 'SPF', key: 'txt', icon: dns.txt?.data?.some(r=>r.data?.includes('v=spf1'))?'✅':'❌', value: dns.txt?.data?.some(r=>r.data?.includes('v=spf1'))?'Present':'Missing' },
+      { label: 'DMARC', key: 'dmarc', icon: dns.dmarc?.ok ? '✅' : '❌', value: dns.dmarc?.ok ? 'Present' : 'Missing' },
+    ];
+
+    dnsHtml = `
+      <div class="divider"></div>
+      <div class="section-title">DNS / Email Authentication</div>
+      <div class="dns-grid">
+        ${checks.map(c=>`
+          <div class="dns-item">
+            <span class="check-icon">${c.icon}</span>
+            <div>
+              <div class="dns-label">${c.label}</div>
+              <div class="dns-value">${c.value}</div>
+            </div>
+          </div>`).join('')}
+      </div>
+    `;
+  }
+
+  return `
+    <div class="card">
+      <div class="card-header">
+        <span style="font-family:'Space Mono',monospace">${info.domain}</span>
+        ${ageTag}
+        <span style="margin-left:auto">${riskLabel}</span>
+      </div>
+      <div class="card-body">
+        <div class="result-grid">
+          <div class="result-item">
+            <div class="result-label">Created</div>
+            <div class="result-value">${fmtDate(info.created)}</div>
+          </div>
+          <div class="result-item">
+            <div class="result-label">Expires</div>
+            <div class="result-value">${fmtDate(info.expires)}</div>
+          </div>
+          <div class="result-item">
+            <div class="result-label">Registrar</div>
+            <div class="result-value">${info.registrar || '—'}</div>
+          </div>
+          <div class="result-item">
+            <div class="result-label">Registrant</div>
+            <div class="result-value">${info.registrant || '—'} ${info.registrantCountry ? '('+info.registrantCountry+')' : ''}</div>
+          </div>
+          <div class="result-item full">
+            <div class="result-label">Nameservers</div>
+            <div class="result-value">${(info.nameservers||[]).join(', ') || '—'}</div>
+          </div>
+          <div class="result-item full">
+            <div class="result-label">Status</div>
+            <div class="result-value">${info.status || '—'}</div>
+          </div>
+        </div>
+
+        ${dnsHtml}
+
+        <div class="divider"></div>
+        <div class="section-title">Risk Flags</div>
+        <ul style="list-style:none;padding:0;margin:0">
+          ${flagsHtml}
+        </ul>
+      </div>
+    </div>
+  `;
+}
+
+// ─── Single Lookup ────────────────────────────────────────────────
+async function doSingleLookup() {
+  const input = document.getElementById('single-input').value;
+  const domain = extractDomain(input);
+  if (!domain) return;
+
+  const btn = document.getElementById('single-btn');
+  const statusEl = document.getElementById('single-status');
+  const resultEl = document.getElementById('single-result');
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>';
+  statusEl.innerHTML = `<div class="status status-info"><span class="spinner"></span> Looking up <strong>${domain}</strong>...</div>`;
+  resultEl.innerHTML = '';
+
+  try {
+    const [whois, dns] = await Promise.all([fetchWhois(domain), fetchDnsChecks(domain)]);
+    statusEl.innerHTML = '';
+    resultEl.innerHTML = renderResult(whois, dns);
+    saveHistory({ domain, risk: whois.risk?.level || 'unknown', time: new Date().toISOString(), input });
+  } catch(e) {
+    statusEl.innerHTML = `<div class="status status-error">❌ Error: ${e.message}</div>`;
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = 'Investigate';
+  }
+}
+
+// ─── Bulk Check ───────────────────────────────────────────────────
+async function doBulkCheck() {
+  const raw = document.getElementById('bulk-input').value;
+  const lines = raw.split('\n').map(l=>l.trim()).filter(Boolean);
+  if (!lines.length) return;
+
+  const statusEl = document.getElementById('bulk-status');
+  const resultEl = document.getElementById('bulk-result');
+  const progEl = document.getElementById('bulk-progress');
+  const progFill = document.getElementById('bulk-prog-fill');
+  const progText = document.getElementById('bulk-prog-text');
+
+  bulkResults = [];
+  resultEl.innerHTML = '';
+  progEl.style.display = 'block';
+
+  const domains = [...new Set(lines.map(l => extractDomain(l)).filter(Boolean).filter(isValidDomain))];
+
+  statusEl.innerHTML = `<div class="status status-info">Checking ${domains.length} domain(s)... Please wait.</div>`;
+
+  for (let i = 0; i < domains.length; i++) {
+    const domain = domains[i];
+    progFill.style.width = ((i+1)/domains.length*100) + '%';
+    progText.textContent = `(${i+1}/${domains.length}) Checking ${domain}...`;
+
+    try {
+      const whois = await fetchWhois(domain);
+      const dns = await fetchDnsChecks(domain);
+      bulkResults.push({ domain, whois, dns, input: lines[i] });
+    } catch(e) {
+      bulkResults.push({ domain, whois: { domain, error: e.message }, dns: null });
+    }
+
+    // Rate limit: small delay between requests
+    if (i < domains.length - 1) await new Promise(r => setTimeout(r, 500));
+  }
+
+  progEl.style.display = 'none';
+  statusEl.innerHTML = `<div class="status status-success">✅ Done — ${bulkResults.length} domains checked</div>`;
+  resultEl.innerHTML = renderBulkTable(bulkResults);
+
+  // Save to history
+  bulkResults.forEach(r => saveHistory({ domain: r.domain, risk: r.whois.risk?.level || 'unknown', time: new Date().toISOString() }));
+}
+
+function renderBulkTable(results) {
+  const sorted = [...results].sort((a,b) => {
+    const order = { high:0, medium:1, low:2, unknown:3 };
+    return (order[a.whois.risk?.level||'unknown']||3) - (order[b.whois.risk?.level||'unknown']||3);
+  });
+
+  const rows = sorted.map(r => {
+    const risk = r.whois.risk;
+    const level = risk?.level || (r.whois.error ? 'unknown' : 'low');
+    const dotClass = { high:'dot-red', medium:'dot-yellow', low:'dot-green', unknown:'dot-gray' }[level];
+    const fmtDate = d => { try { return d ? new Date(d).toLocaleDateString() : '—'; } catch(e) { return '—'; } };
+    const hasMX = r.dns?.mx?.ok ? '✅' : '❌';
+    const hasSPF = r.dns?.txt?.data?.some(x=>x.data?.includes('v=spf1')) ? '✅' : '❌';
+    const hasDMARC = r.dns?.dmarc?.ok ? '✅' : '❌';
+    return `
+      <tr class="row-${level}" onclick="showBulkDetail('${r.domain}')">
+        <td><span class="dot ${dotClass}" style="margin-right:8px"></span>${r.domain}</td>
+        <td>${level.toUpperCase()}</td>
+        <td>${r.whois.registrar || '—'}</td>
+        <td>${fmtDate(r.whois.created)}</td>
+        <td>${hasMX} ${hasSPF} ${hasDMARC}</td>
+        <td>${risk?.flags?.length || 0}</td>
+      </tr>`;
+  }).join('');
+
+  return `
+    <div class="card">
+      <div class="card-header">📊 Results (${results.length} domains)</div>
+      <div style="overflow-x:auto">
+        <table class="bulk-table">
+          <thead>
+            <tr>
+              <th>Domain</th>
+              <th>Risk</th>
+              <th>Registrar</th>
+              <th>Created</th>
+              <th>MX/SPF/DMARC</th>
+              <th>Flags</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>
+    <p style="font-size:0.75rem;color:var(--muted);font-family:'Space Mono',monospace;margin-top:8px">Click a row to view full details.</p>
+    <div id="bulk-detail"></div>
+  `;
+}
+
+function showBulkDetail(domain) {
+  const r = bulkResults.find(r => r.domain === domain);
+  if (!r) return;
+  document.getElementById('bulk-detail').innerHTML = renderResult(r.whois, r.dns);
+  document.getElementById('bulk-detail').scrollIntoView({ behavior: 'smooth' });
+}
+
+function exportBulkCSV() {
+  if (!bulkResults.length) return;
+  const header = 'Domain,Risk Level,Risk Score,Registrar,Created,Expires,MX,SPF,DMARC,Flags';
+  const rows = bulkResults.map(r => {
+    const w = r.whois;
+    const risk = w.risk;
+    const hasMX = r.dns?.mx?.ok ? 'Yes' : 'No';
+    const hasSPF = r.dns?.txt?.data?.some(x=>x.data?.includes('v=spf1')) ? 'Yes' : 'No';
+    const hasDMARC = r.dns?.dmarc?.ok ? 'Yes' : 'No';
+    const flags = (risk?.flags || []).join(' | ');
+    return [w.domain, risk?.level||'unknown', risk?.score||0, w.registrar||'', w.created||'', w.expires||'', hasMX, hasSPF, hasDMARC, `"${flags}"`].join(',');
+  });
+  const csv = [header, ...rows].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'spam-domains.csv'; a.click();
+}
+
+// ─── Gmail Integration ────────────────────────────────────────────
+function loadGoogleApi() {
+  return new Promise((res, rej) => {
+    if (window.gapi) return res();
+    const s = document.createElement('script');
+    s.src = 'https://apis.google.com/js/api.js';
+    s.onload = () => { gapi.load('client', res); };
+    s.onerror = rej;
+    document.head.appendChild(s);
+  });
+}
+
+async function connectGmail() {
+  const clientId = document.getElementById('gmail-client-id').value.trim();
+  if (!clientId) {
+    document.getElementById('gmail-auth-status').innerHTML = '<div class="status status-error">❌ Please enter your OAuth Client ID first</div>';
+    return;
+  }
+
+  const btn = document.getElementById('gmail-connect-btn');
+  btn.disabled = true;
+  btn.textContent = 'Connecting...';
+  document.getElementById('gmail-auth-status').innerHTML = '<div class="status status-info"><span class="spinner"></span> Loading Google API...</div>';
+
+  try {
+    await loadGoogleApi();
+    await gapi.client.init({
+      clientId: clientId,
+      scope: 'https://www.googleapis.com/auth/gmail.readonly',
+      discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/gmail/v1/rest']
+    });
+
+    const authInstance = gapi.auth2.getAuthInstance();
+    await authInstance.signIn();
+    gmailToken = authInstance.currentUser.get().getAuthResponse().access_token;
+    gmailClientId = clientId;
+
+    const profile = authInstance.currentUser.get().getBasicProfile();
+    document.getElementById('gmail-auth-status').innerHTML = `<div class="status status-success">✅ Connected as <strong>${profile.getEmail()}</strong></div>`;
+    document.getElementById('gmail-panel').style.display = 'block';
+  } catch(e) {
+    document.getElementById('gmail-auth-status').innerHTML = `<div class="status status-error">❌ Auth failed: ${e.error || e.message || 'Unknown error'}. Make sure your Client ID is correct and this origin is allowed.</div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Connect Gmail';
+  }
+}
+
+function disconnectGmail() {
+  try { gapi.auth2.getAuthInstance().signOut(); } catch(e) {}
+  gmailToken = null;
+  document.getElementById('gmail-panel').style.display = 'none';
+  document.getElementById('gmail-auth-status').innerHTML = '<div class="status status-warn">⚠️ Disconnected from Gmail</div>';
+  document.getElementById('gmail-result').innerHTML = '';
+}
+
+async function fetchSpamSenders() {
+  if (!gmailToken) return;
+  const limit = parseInt(document.getElementById('gmail-limit').value);
+  const statusEl = document.getElementById('gmail-status');
+  const resultEl = document.getElementById('gmail-result');
+
+  statusEl.innerHTML = `<div class="status status-info"><span class="spinner"></span> Fetching spam folder...</div>`;
+  resultEl.innerHTML = '';
+
+  try {
+    // Get spam messages
+    const listRes = await gapi.client.gmail.users.messages.list({
+      userId: 'me',
+      labelIds: ['SPAM'],
+      maxResults: limit
+    });
+
+    const messages = listRes.result.messages || [];
+    if (!messages.length) {
+      statusEl.innerHTML = '<div class="status status-success">✅ No spam messages found!</div>';
+      return;
+    }
+
+    statusEl.innerHTML = `<div class="status status-info"><span class="spinner"></span> Extracting senders from ${messages.length} spam emails...</div>`;
+
+    // Fetch each message header
+    const senders = new Set();
+    const batchSize = 10;
+    for (let i = 0; i < Math.min(messages.length, limit); i += batchSize) {
+      const batch = messages.slice(i, i + batchSize);
+      await Promise.all(batch.map(async msg => {
+        try {
+          const detail = await gapi.client.gmail.users.messages.get({
+            userId: 'me',
+            id: msg.id,
+            format: 'metadata',
+            metadataHeaders: ['From', 'Reply-To']
+          });
+          const headers = detail.result.payload?.headers || [];
+          for (const h of headers) {
+            if (h.name === 'From' || h.name === 'Reply-To') {
+              const match = h.value.match(/@([a-z0-9.-]+\.[a-z]{2,})/i);
+              if (match) senders.add(match[1].toLowerCase());
+            }
+          }
+        } catch(e) {}
+      }));
+    }
+
+    const domainList = [...senders];
+    statusEl.innerHTML = `<div class="status status-success">✅ Found ${domainList.length} unique sender domains. Running WHOIS checks...</div>`;
+
+    // Put in bulk input and run bulk check
+    document.getElementById('bulk-input').value = domainList.join('\n');
+    switchTab('bulk');
+    document.querySelector('.tab:nth-child(2)').classList.add('active');
+    document.querySelector('.tab.active:not(:nth-child(2))').classList.remove('active');
+    await doBulkCheck();
+  } catch(e) {
+    statusEl.innerHTML = `<div class="status status-error">❌ Error: ${e.message || JSON.stringify(e)}</div>`;
+  }
+}
+
+// ─── History ──────────────────────────────────────────────────────
+function saveHistory(entry) {
+  // Avoid duplicates in last 5 min
+  history = history.filter(h => !(h.domain === entry.domain && Date.now() - new Date(h.time) < 300000));
+  history.unshift(entry);
+  if (history.length > 200) history = history.slice(0, 200);
+  localStorage.setItem('whois_history', JSON.stringify(history));
+}
+
+function renderHistory() {
+  const el = document.getElementById('history-list');
+  if (!history.length) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-icon">🕒</div><div class="empty-title">No lookups yet</div><div>Your lookup history will appear here</div></div>`;
+    return;
+  }
+
+  el.innerHTML = `<div class="history-list">${history.slice(0,50).map((h,i) => {
+    const level = h.risk || 'unknown';
+    const dotClass = { high:'dot-red', medium:'dot-yellow', low:'dot-green', unknown:'dot-gray' }[level];
+    const time = new Date(h.time).toLocaleString();
+    return `
+      <div class="history-item" onclick="lookupFromHistory('${h.domain}')">
+        <div>
+          <div class="history-domain"><span class="dot ${dotClass}" style="margin-right:8px;"></span>${h.domain}</div>
+          <div class="history-meta">${time}</div>
+        </div>
+        <div class="history-actions">
+          <span class="risk-badge risk-${level}" style="font-size:0.7rem">${level.toUpperCase()}</span>
+          <span style="color:var(--muted);font-size:0.8rem">→</span>
+        </div>
+      </div>`;
+  }).join('')}</div>`;
+}
+
+function lookupFromHistory(domain) {
+  document.querySelectorAll('.tab')[0].click();
+  document.getElementById('single-input').value = domain;
+  doSingleLookup();
+}
+
+function clearHistory() {
+  if (confirm('Clear all history?')) {
+    history = [];
+    localStorage.removeItem('whois_history');
+    renderHistory();
+  }
+}
+
+// ─── Keyboard shortcut ───────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+    e.preventDefault();
+    document.getElementById('single-input').focus();
+    document.querySelectorAll('.tab')[0].click();
+  }
+});
+
+// ─── Initial state ────────────────────────────────────────────────
+// Show example placeholder in single input
+document.getElementById('single-input').addEventListener('focus', function() {
+  if (this.value === '') this.placeholder = 'Try: noreply@suspicious-deals.xyz';
+});
+</script>
+</body>
+</html>
