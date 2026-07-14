@@ -10,11 +10,12 @@
     --grid: rgba(255,255,255,0.04);
     --accent: #5eead4;
     --text: #e5e7eb;
-    --muted: #6b7280;
+    --muted: #8b93a1;
+    --card: #10151f;
+    --border: rgba(255,255,255,0.08);
   }
   * { box-sizing: border-box; }
   html, body {
-    height: 100%;
     margin: 0;
     background: var(--bg);
     color: var(--text);
@@ -25,15 +26,16 @@
       linear-gradient(var(--grid) 1px, transparent 1px),
       linear-gradient(90deg, var(--grid) 1px, transparent 1px);
     background-size: 40px 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 24px;
+    min-height: 100vh;
+    padding: 60px 24px 40px;
   }
-  .card {
-    max-width: 560px;
-    width: 100%;
+  .wrap {
+    max-width: 880px;
+    margin: 0 auto;
+  }
+  header {
     text-align: center;
+    margin-bottom: 56px;
   }
   .tag {
     display: inline-block;
@@ -47,8 +49,8 @@
     margin-bottom: 22px;
   }
   h1 {
-    font-size: 44px;
-    line-height: 1.15;
+    font-size: 42px;
+    line-height: 1.2;
     margin: 0 0 14px;
     font-weight: 700;
     letter-spacing: -0.02em;
@@ -58,22 +60,67 @@
     color: var(--muted);
     font-size: 16px;
     line-height: 1.6;
-    margin: 0 0 32px;
+    max-width: 480px;
+    margin: 0 auto;
   }
-  .prompt {
-    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    font-size: 14px;
-    color: var(--muted);
-    background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.08);
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 16px;
+  }
+  .page-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 22px 18px;
+    text-decoration: none;
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    transition: border-color 0.15s ease, transform 0.15s ease;
+  }
+  .page-card:hover {
+    border-color: rgba(94,234,212,0.4);
+    transform: translateY(-2px);
+  }
+  .icon {
+    width: 38px;
+    height: 38px;
     border-radius: 10px;
-    padding: 14px 18px;
-    text-align: left;
+    background: rgba(94,234,212,0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
   }
-  .prompt .line { margin: 0; }
-  .prompt .prefix { color: var(--accent); }
+  .page-card h3 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+  }
+  .page-card p {
+    margin: 0;
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+  .page-card.empty {
+    border-style: dashed;
+    color: var(--muted);
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    min-height: 118px;
+  }
+  .page-card.empty .icon {
+    background: transparent;
+    border: 1px dashed var(--border);
+    color: var(--muted);
+  }
   footer {
-    margin-top: 36px;
+    text-align: center;
+    margin-top: 56px;
     font-size: 13px;
     color: var(--muted);
   }
@@ -86,15 +133,29 @@
 </style>
 </head>
 <body>
-  <div class="card">
-    <span class="tag">● bstef.pages.dev</span>
-    <h1>A small corner of the <span>internet</span>, hosting whatever I build.</h1>
-    <p class="sub">This index sits at the root while individual pages and experiments live at their own paths.</p>
-    <div class="prompt">
-      <p class="line"><span class="prefix">$</span> ls ./pages</p>
-      <p class="line">perodic.html</p>
-      <p class="line" style="color: rgba(255,255,255,0.2);">// more coming soon</p>
+  <div class="wrap">
+    <header>
+      <span class="tag">● bstef.pages.dev</span>
+      <h1>A small corner of the <span>internet</span>,<br>hosting whatever I build.</h1>
+      <p class="sub">This index sits at the root while individual pages and experiments live at their own paths below.</p>
+    </header>
+
+    <div class="grid">
+      <a class="page-card" href="/perodic.html">
+        <div class="icon">⚛️</div>
+        <h3>Periodic Table</h3>
+        <p>Interactive elements reference</p>
+      </a>
+      <div class="page-card empty">
+        <div class="icon">+</div>
+        <p>More coming soon</p>
+      </div>
+      <div class="page-card empty">
+        <div class="icon">+</div>
+        <p>More coming soon</p>
+      </div>
     </div>
+
     <footer>
       <a href="https://bstef.com">bstef.com</a> · <a href="https://github.com/bstef/bstefcf">source</a>
     </footer>
