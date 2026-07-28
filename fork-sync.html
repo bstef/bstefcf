@@ -13,8 +13,8 @@
     --muted: #8b93a1;
     --card: #10151f;
     --border: rgba(255,255,255,0.08);
-    --green: #5eead4;
     --yellow: #f5c451;
+    --red: #f87171;
   }
   * { box-sizing: border-box; }
   html, body {
@@ -40,7 +40,7 @@
     font-size: 13px;
   }
   a.back:hover { color: var(--accent); }
-  header { margin-bottom: 40px; }
+  header { margin-bottom: 28px; }
   .tag {
     display: inline-block;
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -54,6 +54,29 @@
   }
   h1 { margin: 0 0 8px 0; font-size: 26px; }
   .sub { color: var(--muted); font-size: 14px; }
+
+  .tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+  }
+  .tab-btn {
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 500;
+    padding: 10px 4px;
+    margin-right: 20px;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    font-family: inherit;
+  }
+  .tab-btn.active { color: var(--text); border-bottom-color: var(--accent); }
+  .tab-btn:hover { color: var(--accent); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
 
   .stats {
     display: grid;
@@ -96,6 +119,19 @@
     color: var(--accent);
     border: 1px solid rgba(94,234,212,0.25);
   }
+  .status-pill {
+    display: inline-block;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+  .status-success { background: rgba(94,234,212,0.1); color: var(--accent); border: 1px solid rgba(94,234,212,0.3); }
+  .status-partial { background: rgba(245,196,81,0.1); color: var(--yellow); border: 1px solid rgba(245,196,81,0.3); }
+  .status-failed { background: rgba(248,113,113,0.1); color: var(--red); border: 1px solid rgba(248,113,113,0.3); }
 
   ul.repo-list { list-style: none; margin: 0; padding: 0; }
   ul.repo-list li {
@@ -111,15 +147,32 @@
   ul.repo-list a:hover { color: var(--accent); }
   .detail { color: var(--muted); font-size: 12px; text-align: right; white-space: nowrap; padding-left: 12px; }
 
-  .note {
-    background: rgba(245,196,81,0.06);
-    border: 1px solid rgba(245,196,81,0.25);
-    border-radius: 14px;
-    padding: 16px 20px;
+  table.history {
+    width: 100%;
+    border-collapse: collapse;
     font-size: 13px;
-    color: var(--yellow);
-    margin-bottom: 20px;
   }
+  table.history th {
+    text-align: left;
+    color: var(--muted);
+    font-weight: 500;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    padding: 0 10px 10px 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  table.history td {
+    padding: 12px 10px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  table.history tr:last-child td { border-bottom: none; }
+  table.history .num-cell { color: var(--accent); font-weight: 600; }
+  table.history .notes-cell { color: var(--muted); font-size: 12px; max-width: 220px; }
+
+  .empty-state { color: var(--muted); font-size: 13px; text-align: center; padding: 30px 0; }
+
   footer {
     text-align: center;
     margin-top: 48px;
@@ -144,56 +197,142 @@
   <header>
     <div class="tag">&#9679; github-branch-update-check</div>
     <h1>Fork Sync Report</h1>
-    <div class="sub">bstef · GitHub forks synced with upstream · Jul 28, 2026, 2:28 PM</div>
+    <div class="sub" id="latest-sub">Loading&hellip;</div>
   </header>
 
-  <div class="stats">
-    <div class="stat">
-      <div class="num">77</div>
-      <div class="label">Forks checked</div>
-    </div>
-    <div class="stat">
-      <div class="num">3</div>
-      <div class="label">Synced</div>
-    </div>
-    <div class="stat">
-      <div class="num">74</div>
-      <div class="label">Already up to date</div>
-    </div>
-    <div class="stat">
-      <div class="num">0</div>
-      <div class="label">Conflicts</div>
-    </div>
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="latest">Latest Run</button>
+    <button class="tab-btn" data-tab="history">History</button>
   </div>
 
-  <div class="section">
-    <h2>Synced this run <span class="badge">3</span></h2>
-    <ul class="repo-list">
-      <li>
-        <a href="https://github.com/bstef/openclaw" target="_blank">openclaw</a>
-        <span class="detail">was 21 commits behind &rarr; updated</span>
-      </li>
-      <li>
-        <a href="https://github.com/bstef/domain-locker" target="_blank">domain-locker</a>
-        <span class="detail">was 4 commits behind &rarr; updated</span>
-      </li>
-      <li>
-        <a href="https://github.com/bstef/agent-sandbox" target="_blank">agent-sandbox</a>
-        <span class="detail">was 1 commit behind &rarr; updated</span>
-      </li>
-    </ul>
+  <div class="tab-panel active" id="panel-latest">
+    <div class="stats" id="latest-stats"></div>
+    <div class="section" id="latest-synced-section" style="display:none;">
+      <h2>Synced this run <span class="badge" id="latest-synced-badge">0</span></h2>
+      <ul class="repo-list" id="latest-synced-list"></ul>
+    </div>
+    <div class="section" id="latest-conflicts-section" style="display:none;">
+      <h2>Conflicts requiring manual resolution <span class="badge" id="latest-conflicts-badge">0</span></h2>
+      <ul class="repo-list" id="latest-conflicts-list"></ul>
+    </div>
+    <div class="empty-state" id="latest-empty" style="display:none;"></div>
   </div>
 
-  <div class="section">
-    <h2>Conflicts requiring manual resolution <span class="badge">0</span></h2>
-    <p style="color:var(--muted); font-size:13px; margin:0;">
-      None this run. All previously-flagged conflicts have been resolved.
-    </p>
+  <div class="tab-panel" id="panel-history">
+    <div class="section">
+      <h2>Run history <span class="badge" id="history-count-badge">0</span></h2>
+      <table class="history" id="history-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Status</th>
+            <th>Checked</th>
+            <th>Synced</th>
+            <th>Up to date</th>
+            <th>Conflicts</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody id="history-tbody"></tbody>
+      </table>
+      <div class="empty-state" id="history-empty" style="display:none;">No history recorded yet.</div>
+    </div>
   </div>
 
   <footer>
     Auto-updated by the <code>github-branch-update-check</code> scheduled task &middot; <a href="https://github.com/bstef/bstefcf">source</a>
   </footer>
 </div>
+
+<script>
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, function(c) {
+    return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];
+  });
+}
+function statusPill(status) {
+  var cls = status === 'success' ? 'status-success' : status === 'partial' ? 'status-partial' : 'status-failed';
+  return '<span class="status-pill ' + cls + '">' + escapeHtml(status || 'unknown') + '</span>';
+}
+
+fetch('/fork-sync-history.json', {cache: 'no-store'})
+  .then(function(r) { return r.ok ? r.json() : []; })
+  .catch(function() { return []; })
+  .then(function(history) {
+    if (!Array.isArray(history)) history = [];
+    history = history.slice().sort(function(a, b) { return new Date(b.date) - new Date(a.date); });
+
+    var latest = history[0];
+    if (latest) {
+      document.getElementById('latest-sub').innerHTML =
+        'bstef &middot; GitHub forks synced with upstream &middot; ' + escapeHtml(latest.dateDisplay || latest.date) +
+        ' &middot; ' + statusPill(latest.status);
+
+      document.getElementById('latest-stats').innerHTML =
+        '<div class="stat"><div class="num">' + (latest.forksChecked != null ? latest.forksChecked : '—') + '</div><div class="label">Forks checked</div></div>' +
+        '<div class="stat"><div class="num">' + (latest.synced != null ? latest.synced : '—') + '</div><div class="label">Synced</div></div>' +
+        '<div class="stat"><div class="num">' + (latest.upToDate != null ? latest.upToDate : '—') + '</div><div class="label">Already up to date</div></div>' +
+        '<div class="stat"><div class="num">' + (latest.conflicts != null ? latest.conflicts : '—') + '</div><div class="label">Conflicts</div></div>';
+
+      var syncedRepos = latest.syncedRepos || [];
+      if (syncedRepos.length) {
+        document.getElementById('latest-synced-section').style.display = '';
+        document.getElementById('latest-synced-badge').textContent = syncedRepos.length;
+        document.getElementById('latest-synced-list').innerHTML = syncedRepos.map(function(r) {
+          return '<li><a href="https://github.com/bstef/' + encodeURIComponent(r.name) + '" target="_blank">' + escapeHtml(r.name) + '</a>' +
+            '<span class="detail">' + escapeHtml(r.detail || '') + '</span></li>';
+        }).join('');
+      }
+
+      var conflictRepos = latest.conflictRepos || [];
+      document.getElementById('latest-conflicts-section').style.display = '';
+      document.getElementById('latest-conflicts-badge').textContent = conflictRepos.length;
+      if (conflictRepos.length) {
+        document.getElementById('latest-conflicts-list').innerHTML = conflictRepos.map(function(r) {
+          return '<li><a href="https://github.com/bstef/' + encodeURIComponent(r.name) + '" target="_blank">' + escapeHtml(r.name) + '</a>' +
+            '<span class="detail">' + escapeHtml(r.note || r.detail || '') + '</span></li>';
+        }).join('');
+      } else {
+        document.getElementById('latest-conflicts-list').innerHTML =
+          '<li style="border-bottom:none;"><span style="color:var(--muted);">None. All previously-flagged conflicts have been resolved.</span></li>';
+      }
+
+      if (latest.notes) {
+        document.getElementById('latest-empty').style.display = '';
+        document.getElementById('latest-empty').textContent = latest.notes;
+      }
+    } else {
+      document.getElementById('latest-sub').textContent = 'No run data found yet.';
+      document.getElementById('latest-empty').style.display = '';
+      document.getElementById('latest-empty').textContent = 'No run data found yet.';
+    }
+
+    document.getElementById('history-count-badge').textContent = history.length;
+    if (history.length) {
+      document.getElementById('history-tbody').innerHTML = history.map(function(run) {
+        return '<tr>' +
+          '<td>' + escapeHtml(run.dateDisplay || run.date || '') + '</td>' +
+          '<td>' + statusPill(run.status) + '</td>' +
+          '<td class="num-cell">' + (run.forksChecked != null ? run.forksChecked : '—') + '</td>' +
+          '<td class="num-cell">' + (run.synced != null ? run.synced : '—') + '</td>' +
+          '<td class="num-cell">' + (run.upToDate != null ? run.upToDate : '—') + '</td>' +
+          '<td class="num-cell">' + (run.conflicts != null ? run.conflicts : '—') + '</td>' +
+          '<td class="notes-cell">' + escapeHtml(run.notes || '') + '</td>' +
+        '</tr>';
+      }).join('');
+    } else {
+      document.getElementById('history-empty').style.display = '';
+    }
+  });
+
+document.querySelectorAll('.tab-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+    document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.remove('active'); });
+    btn.classList.add('active');
+    document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
+  });
+});
+</script>
 </body>
 </html>
