@@ -53,7 +53,6 @@ function buildQuery(groupKey) {
             count
             sum {
               visits
-              requests
               edgeResponseBytes
               cachedBytes
               threats
@@ -66,7 +65,6 @@ function buildQuery(groupKey) {
             }
             sum {
               visits
-              requests
               edgeResponseBytes
               cachedBytes
               threats
@@ -79,27 +77,24 @@ function buildQuery(groupKey) {
             }
             sum {
               visits
-              requests
               edgeResponseBytes
             }
           }
-          countries: httpRequestsAdaptiveGroups(limit: 12, filter: $filter, orderBy: [sum_requests_DESC]) {
+          countries: httpRequestsAdaptiveGroups(limit: 12, filter: $filter, orderBy: [count_DESC]) {
             count
             dimensions {
               clientCountryName
             }
             sum {
-              requests
               edgeResponseBytes
             }
           }
-          statuses: httpRequestsAdaptiveGroups(limit: 12, filter: $filter, orderBy: [sum_requests_DESC]) {
+          statuses: httpRequestsAdaptiveGroups(limit: 12, filter: $filter, orderBy: [count_DESC]) {
             count
             dimensions {
               edgeResponseStatus
             }
             sum {
-              requests
               edgeResponseBytes
             }
           }
