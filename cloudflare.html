@@ -312,8 +312,10 @@
         <input id="endpoint" value="/api/analytics" autocomplete="off">
       </label>
       <label>
-        Zone ID
-        <input id="zoneTag" placeholder="Cloudflare zone ID" autocomplete="off">
+        Domain
+        <select id="zoneTag">
+          <option value="">All domains</option>
+        </select>
       </label>
       <label>
         Hostname
@@ -395,6 +397,14 @@
         </div>
         <div id="statuses" class="table"></div>
       </article>
+
+      <article class="panel half" id="domainsPanel" style="display:none;">
+        <div class="panel-head">
+          <h2>Top Domains</h2>
+          <div class="hint">by requests</div>
+        </div>
+        <div id="domains" class="table"></div>
+      </article>
     </section>
   </main>
 
@@ -407,8 +417,35 @@
 
     function loadState() {
       for (const key of stateKeys) {
+        if (key === "zoneTag") continue;
         const value = localStorage.getItem(`cfDash:${key}`);
         if (value) $(key).value = value;
+      }
+    }
+
+    function zonesEndpoint() {
+      const endpoint = $("endpoint").value.trim() || "/api/analytics";
+      return endpoint.replace(/analytics\/?$/, "zones");
+    }
+
+    async function loadZones() {
+      try {
+        const response = await fetch(zonesEndpoint(), { headers: { "Accept": "application/json" } });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(payload.error || `Request failed with HTTP ${response.status}`);
+
+        const select = $("zoneTag");
+        const stored = localStorage.getItem("cfDash:zoneTag") || "";
+        select.innerHTML = '<option value="">All domains</option>';
+        for (const zone of payload.zones || []) {
+          const option = document.createElement("option");
+          option.value = zone.id;
+          option.textContent = zone.name;
+          select.appendChild(option);
+        }
+        select.value = stored;
+      } catch (error) {
+        showError(`Could not load domain list: ${error.message}`);
       }
     }
 
@@ -556,6 +593,18 @@
       renderRows("countries", data.countries || [], "requests", fmtNum);
       renderRows("paths", data.paths || [], "bytes", fmtBytes);
       renderRows("statuses", data.statuses || [], "requests", fmtNum);
+
+      const domainsPanel = $("domainsPanel");
+      if (data.domains && data.domains.length) {
+        domainsPanel.style.display = "";
+        renderRows("domains", data.domains, "requests", fmtNum);
+      } else {
+        domainsPanel.style.display = "none";
+      }
+
+      if (data.failedZones && data.failedZones.length) {
+        $("subtitle").textContent += ` · ${data.failedZones.length} zone(s) failed to load`;
+      }
     }
 
     async function refresh(event) {
@@ -566,9 +615,12 @@
       document.querySelector(".refresh").disabled = true;
 
       const endpoint = $("endpoint").value.trim() || "/api/analytics";
+      const zoneSelect = $("zoneTag");
+      const zoneName = zoneSelect.value ? (zoneSelect.options[zoneSelect.selectedIndex]?.textContent || "") : "";
       const params = new URLSearchParams({
         range: $("range").value,
-        zoneTag: $("zoneTag").value.trim(),
+        zoneTag: zoneSelect.value,
+        zoneName,
         hostname: $("hostname").value.trim()
       });
 
@@ -588,7 +640,7 @@
 
     loadState();
     $("controls").addEventListener("submit", refresh);
-    refresh();
+    loadZones().then(refresh);
     setInterval(refresh, 5 * 60 * 1000);
   </script>
 </body>
