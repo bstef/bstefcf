@@ -1,0 +1,595 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Cloudflare Dashboard</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #111318;
+      --panel: #1b1f27;
+      --panel-2: #232936;
+      --line: #343c4c;
+      --text: #f4f7fb;
+      --muted: #9da8b9;
+      --orange: #f48120;
+      --cyan: #43c6d9;
+      --green: #62d38b;
+      --red: #ff6b6b;
+      --yellow: #f5c451;
+      --shadow: 0 18px 60px rgba(0, 0, 0, 0.28);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 10% 0%, rgba(244, 129, 32, 0.14), transparent 28rem),
+        linear-gradient(180deg, #151820 0%, var(--bg) 42%);
+      color: var(--text);
+    }
+
+    button, input, select { font: inherit; }
+
+    .shell {
+      width: min(1480px, calc(100vw - 40px));
+      margin: 0 auto;
+      padding: 24px 0 36px;
+    }
+
+    header {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 20px;
+      margin-bottom: 18px;
+    }
+
+    .title h1 {
+      margin: 0;
+      font-size: clamp(28px, 4vw, 48px);
+      line-height: 1;
+      letter-spacing: 0;
+    }
+
+    .title p {
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 14px;
+      white-space: nowrap;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--yellow);
+      box-shadow: 0 0 0 5px rgba(245, 196, 81, 0.12);
+    }
+
+    .dot.ok {
+      background: var(--green);
+      box-shadow: 0 0 0 5px rgba(98, 211, 139, 0.14);
+    }
+
+    .dot.bad {
+      background: var(--red);
+      box-shadow: 0 0 0 5px rgba(255, 107, 107, 0.14);
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr 160px 130px;
+      gap: 12px;
+      padding: 14px;
+      background: rgba(27, 31, 39, 0.84);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+      margin-bottom: 14px;
+    }
+
+    label {
+      display: grid;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    input, select {
+      min-width: 0;
+      width: 100%;
+      color: var(--text);
+      background: #11151d;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 11px 12px;
+      outline: none;
+    }
+
+    input:focus, select:focus {
+      border-color: var(--orange);
+      box-shadow: 0 0 0 3px rgba(244, 129, 32, 0.16);
+    }
+
+    .refresh {
+      align-self: end;
+      height: 42px;
+      border: 0;
+      border-radius: 6px;
+      background: var(--orange);
+      color: #17110c;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .refresh:disabled {
+      opacity: 0.55;
+      cursor: wait;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 14px;
+    }
+
+    .metric, .panel {
+      background: rgba(27, 31, 39, 0.94);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 10px 34px rgba(0, 0, 0, 0.18);
+    }
+
+    .metric {
+      grid-column: span 2;
+      padding: 16px;
+      min-height: 124px;
+      display: grid;
+      align-content: space-between;
+      gap: 14px;
+    }
+
+    .metric .name {
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .metric .value {
+      font-size: clamp(24px, 3vw, 38px);
+      font-weight: 850;
+      line-height: 1;
+    }
+
+    .metric .sub {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .panel {
+      padding: 16px;
+      min-height: 310px;
+    }
+
+    .wide { grid-column: span 8; }
+    .side { grid-column: span 4; }
+    .half { grid-column: span 6; }
+
+    .panel-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+
+    .panel h2 {
+      margin: 0;
+      font-size: 17px;
+      letter-spacing: 0;
+    }
+
+    .panel .hint {
+      color: var(--muted);
+      font-size: 13px;
+      text-align: right;
+    }
+
+    canvas {
+      width: 100%;
+      height: 240px;
+      display: block;
+    }
+
+    .table {
+      display: grid;
+      gap: 8px;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(52, 60, 76, 0.62);
+    }
+
+    .row:last-child { border-bottom: 0; }
+
+    .label {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: #dfe6f1;
+    }
+
+    .bar-wrap {
+      grid-column: 1 / -1;
+      height: 6px;
+      background: #11151d;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--orange), var(--cyan));
+      border-radius: inherit;
+    }
+
+    .amount {
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .empty {
+      color: var(--muted);
+      padding: 24px 0;
+    }
+
+    .error {
+      display: none;
+      margin-bottom: 14px;
+      padding: 12px 14px;
+      border: 1px solid rgba(255, 107, 107, 0.45);
+      background: rgba(255, 107, 107, 0.1);
+      border-radius: 8px;
+      color: #ffdede;
+    }
+
+    @media (max-width: 1050px) {
+      .controls { grid-template-columns: 1fr 1fr; }
+      .metric { grid-column: span 4; }
+      .wide, .side, .half { grid-column: span 12; }
+    }
+
+    @media (max-width: 680px) {
+      .shell { width: min(100vw - 24px, 1480px); padding-top: 16px; }
+      header { align-items: start; flex-direction: column; }
+      .controls { grid-template-columns: 1fr; }
+      .metric { grid-column: span 6; }
+      .status { white-space: normal; }
+    }
+
+    @media (max-width: 460px) {
+      .metric { grid-column: span 12; }
+      .metric .value { font-size: 30px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <div class="title">
+        <h1>Cloudflare Dashboard</h1>
+        <p id="subtitle">Cloudflare traffic, cache, threat, country, path, and status metrics.</p>
+      </div>
+      <div class="status"><span id="statusDot" class="dot"></span><span id="statusText">Waiting for data</span></div>
+    </header>
+
+    <form id="controls" class="controls">
+      <label>
+        API endpoint
+        <input id="endpoint" value="/api/analytics" autocomplete="off">
+      </label>
+      <label>
+        Zone ID
+        <input id="zoneTag" placeholder="Cloudflare zone ID" autocomplete="off">
+      </label>
+      <label>
+        Hostname
+        <input id="hostname" placeholder="example.com" autocomplete="off">
+      </label>
+      <label>
+        Window
+        <select id="range">
+          <option value="24h">24 hours</option>
+          <option value="7d">7 days</option>
+          <option value="30d">30 days</option>
+        </select>
+      </label>
+      <button class="refresh" type="submit">Refresh</button>
+    </form>
+
+    <div id="error" class="error"></div>
+
+    <section class="grid">
+      <article class="metric">
+        <div class="name">Visits</div>
+        <div id="visits" class="value">-</div>
+        <div id="visitsSub" class="sub">Unique-ish visitor sessions</div>
+      </article>
+      <article class="metric">
+        <div class="name">Requests</div>
+        <div id="requests" class="value">-</div>
+        <div id="requestsSub" class="sub">HTTP requests</div>
+      </article>
+      <article class="metric">
+        <div class="name">Transfer</div>
+        <div id="bytes" class="value">-</div>
+        <div class="sub">Edge response bytes</div>
+      </article>
+      <article class="metric">
+        <div class="name">Cached</div>
+        <div id="cached" class="value">-</div>
+        <div id="cachedSub" class="sub">Bytes served from cache</div>
+      </article>
+      <article class="metric">
+        <div class="name">Threats</div>
+        <div id="threats" class="value">-</div>
+        <div class="sub">Security events in traffic</div>
+      </article>
+      <article class="metric">
+        <div class="name">Cache Ratio</div>
+        <div id="cacheRatio" class="value">-</div>
+        <div class="sub">Cached / transferred</div>
+      </article>
+
+      <article class="panel wide">
+        <div class="panel-head">
+          <h2>Traffic Over Time</h2>
+          <div class="hint">requests and data transfer</div>
+        </div>
+        <canvas id="trafficChart" width="1200" height="320"></canvas>
+      </article>
+
+      <article class="panel side">
+        <div class="panel-head">
+          <h2>Top Countries</h2>
+          <div class="hint">by requests</div>
+        </div>
+        <div id="countries" class="table"></div>
+      </article>
+
+      <article class="panel half">
+        <div class="panel-head">
+          <h2>Top Paths</h2>
+          <div class="hint">by bandwidth</div>
+        </div>
+        <div id="paths" class="table"></div>
+      </article>
+
+      <article class="panel half">
+        <div class="panel-head">
+          <h2>Status Codes</h2>
+          <div class="hint">edge responses</div>
+        </div>
+        <div id="statuses" class="table"></div>
+      </article>
+    </section>
+  </main>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const stateKeys = ["endpoint", "zoneTag", "hostname", "range"];
+
+    const numberFmt = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
+    const compactFmt = new Intl.NumberFormat(undefined, { notation: "compact", maximumFractionDigits: 1 });
+
+    function loadState() {
+      for (const key of stateKeys) {
+        const value = localStorage.getItem(`cfDash:${key}`);
+        if (value) $(key).value = value;
+      }
+    }
+
+    function saveState() {
+      for (const key of stateKeys) localStorage.setItem(`cfDash:${key}`, $(key).value.trim());
+    }
+
+    function fmtNum(value) {
+      if (value === null || value === undefined) return "-";
+      return Number(value) >= 10000 ? compactFmt.format(value) : numberFmt.format(value);
+    }
+
+    function fmtBytes(bytes) {
+      if (!bytes) return "0 B";
+      const units = ["B", "KB", "MB", "GB", "TB"];
+      let value = bytes;
+      let index = 0;
+      while (value >= 1024 && index < units.length - 1) {
+        value /= 1024;
+        index += 1;
+      }
+      return `${value.toFixed(value >= 10 || index === 0 ? 0 : 1)} ${units[index]}`;
+    }
+
+    function setStatus(kind, text) {
+      $("statusDot").className = `dot ${kind || ""}`.trim();
+      $("statusText").textContent = text;
+    }
+
+    function showError(message) {
+      const box = $("error");
+      box.textContent = message || "";
+      box.style.display = message ? "block" : "none";
+    }
+
+    function drawTrafficChart(points) {
+      const canvas = $("trafficChart");
+      const ctx = canvas.getContext("2d");
+      const width = canvas.width;
+      const height = canvas.height;
+      ctx.clearRect(0, 0, width, height);
+
+      const pad = { top: 18, right: 44, bottom: 34, left: 54 };
+      const plotW = width - pad.left - pad.right;
+      const plotH = height - pad.top - pad.bottom;
+      const data = points && points.length ? points : [];
+      const maxRequests = Math.max(1, ...data.map((p) => p.requests || 0));
+      const maxBytes = Math.max(1, ...data.map((p) => p.bytes || 0));
+
+      ctx.strokeStyle = "rgba(157, 168, 185, 0.18)";
+      ctx.lineWidth = 1;
+      ctx.font = "22px Inter, system-ui, sans-serif";
+      ctx.fillStyle = "rgba(157, 168, 185, 0.78)";
+      for (let i = 0; i <= 4; i += 1) {
+        const y = pad.top + (plotH / 4) * i;
+        ctx.beginPath();
+        ctx.moveTo(pad.left, y);
+        ctx.lineTo(width - pad.right, y);
+        ctx.stroke();
+      }
+
+      if (!data.length) {
+        ctx.fillText("No traffic data returned yet", pad.left, height / 2);
+        return;
+      }
+
+      const xAt = (index) => pad.left + (plotW * index) / Math.max(1, data.length - 1);
+      const yRequests = (value) => pad.top + plotH - (plotH * value) / maxRequests;
+      const yBytes = (value) => pad.top + plotH - (plotH * value) / maxBytes;
+
+      function line(color, yFn, key) {
+        ctx.beginPath();
+        data.forEach((point, index) => {
+          const x = xAt(index);
+          const y = yFn(point[key] || 0);
+          if (index === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        });
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 4;
+        ctx.lineJoin = "round";
+        ctx.lineCap = "round";
+        ctx.stroke();
+      }
+
+      line("#f48120", yRequests, "requests");
+      line("#43c6d9", yBytes, "bytes");
+
+      ctx.fillStyle = "#f48120";
+      ctx.fillRect(pad.left, height - 18, 18, 5);
+      ctx.fillStyle = "#9da8b9";
+      ctx.font = "20px Inter, system-ui, sans-serif";
+      ctx.fillText("Requests", pad.left + 26, height - 11);
+
+      ctx.fillStyle = "#43c6d9";
+      ctx.fillRect(pad.left + 150, height - 18, 18, 5);
+      ctx.fillStyle = "#9da8b9";
+      ctx.fillText("Bytes", pad.left + 176, height - 11);
+    }
+
+    function renderRows(id, rows, valueKey, formatter) {
+      const target = $(id);
+      target.innerHTML = "";
+      if (!rows || !rows.length) {
+        target.innerHTML = '<div class="empty">No data returned for this window.</div>';
+        return;
+      }
+      const max = Math.max(1, ...rows.map((row) => row[valueKey] || 0));
+      for (const row of rows) {
+        const item = document.createElement("div");
+        item.className = "row";
+        const label = document.createElement("div");
+        label.className = "label";
+        label.title = row.label || "(unknown)";
+        label.textContent = row.label || "(unknown)";
+        const amount = document.createElement("div");
+        amount.className = "amount";
+        amount.textContent = formatter(row[valueKey] || 0);
+        const wrap = document.createElement("div");
+        wrap.className = "bar-wrap";
+        const bar = document.createElement("div");
+        bar.className = "bar";
+        bar.style.width = `${Math.max(2, ((row[valueKey] || 0) / max) * 100)}%`;
+        wrap.appendChild(bar);
+        item.append(label, amount, wrap);
+        target.appendChild(item);
+      }
+    }
+
+    function render(data) {
+      const totals = data.totals || {};
+      $("subtitle").textContent = `${data.hostname || "All hostnames"} · ${data.rangeLabel || "selected window"} · refreshed ${new Date().toLocaleTimeString()}`;
+      $("visits").textContent = fmtNum(totals.visits);
+      $("requests").textContent = fmtNum(totals.requests);
+      $("bytes").textContent = fmtBytes(totals.bytes);
+      $("cached").textContent = fmtBytes(totals.cachedBytes);
+      $("threats").textContent = fmtNum(totals.threats);
+      const ratio = totals.bytes ? (totals.cachedBytes || 0) / totals.bytes : 0;
+      $("cacheRatio").textContent = `${Math.round(ratio * 100)}%`;
+      $("visitsSub").textContent = `${fmtNum(totals.requestsPerVisit || 0)} requests per visit`;
+      $("requestsSub").textContent = `${fmtBytes(totals.bytesPerRequest || 0)} per request`;
+      $("cachedSub").textContent = `${fmtBytes(Math.max(0, (totals.bytes || 0) - (totals.cachedBytes || 0)))} uncached`;
+
+      drawTrafficChart(data.timeseries || []);
+      renderRows("countries", data.countries || [], "requests", fmtNum);
+      renderRows("paths", data.paths || [], "bytes", fmtBytes);
+      renderRows("statuses", data.statuses || [], "requests", fmtNum);
+    }
+
+    async function refresh(event) {
+      if (event) event.preventDefault();
+      saveState();
+      showError("");
+      setStatus("", "Loading analytics");
+      document.querySelector(".refresh").disabled = true;
+
+      const endpoint = $("endpoint").value.trim() || "/api/analytics";
+      const params = new URLSearchParams({
+        range: $("range").value,
+        zoneTag: $("zoneTag").value.trim(),
+        hostname: $("hostname").value.trim()
+      });
+
+      try {
+        const response = await fetch(`${endpoint}?${params}`, { headers: { "Accept": "application/json" } });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(payload.error || `Request failed with HTTP ${response.status}`);
+        render(payload);
+        setStatus("ok", "Live data loaded");
+      } catch (error) {
+        setStatus("bad", "Data load failed");
+        showError(error.message);
+      } finally {
+        document.querySelector(".refresh").disabled = false;
+      }
+    }
+
+    loadState();
+    $("controls").addEventListener("submit", refresh);
+    refresh();
+    setInterval(refresh, 5 * 60 * 1000);
+  </script>
+</body>
+</html>
