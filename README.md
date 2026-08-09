@@ -20,8 +20,23 @@ This repo is deployed automatically to Cloudflare Pages on every push to `main`.
 ## Adding a new page
 
 1. Drop a new `.html` file anywhere in the repo (root or a subfolder).
-2. Commit and push to `main`.
-3. Cloudflare Pages auto-deploys the change — it'll be live at `bstef.pages.dev/<filename>` within a minute or two.
+2. Add an entry to the `SITE_APPS` array in `site-nav.js` (path, icon, name, description).
+3. Commit and push to `main`.
+4. Cloudflare Pages auto-deploys the change — it'll be live at `bstef.pages.dev/<filename>` within a minute or two.
+
+Step 2 is what makes the new page show up as a card on the index and as a nav link in every other page's footer — see below.
+
+## Shared navigation
+
+`site-nav.js` + `site-nav.css` are the single source of truth for site-wide navigation. `SITE_APPS` in `site-nav.js` lists every app; the script renders it into whichever of these mount points a page includes:
+
+| Mount point | Renders |
+| --- | --- |
+| `<div class="grid" id="app-grid"></div>` | index.html's card grid |
+| `<div id="site-back"></div>` | "&larr; back to bstef.pages.dev" link (skipped on the index itself) |
+| `<div id="site-footer"></div>` | nav links to every other app, plus bstef.com/source links |
+
+Because every page pulls from the same `SITE_APPS` array, adding one entry keeps the index cards, every footer, and the favicon-matching icons all in sync — no per-page edits needed. Page-specific footer content (e.g. qr.html's privacy note, fork-sync.html's scheduled-task blurb) stays separate and is rendered alongside `#site-footer`, not replaced by it.
 
 ## Cloudflare dashboard backend
 
