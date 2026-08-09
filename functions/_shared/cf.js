@@ -3,8 +3,8 @@ const ZONES_ENDPOINT = "https://api.cloudflare.com/client/v4/zones";
 
 export const RANGE_CONFIG = {
   "24h": { ms: 24 * 60 * 60 * 1000, label: "last 24 hours", group: "datetimeHour" },
-  "7d": { ms: 7 * 24 * 60 * 60 * 1000, label: "last 7 days", group: "datetimeDay" },
-  "30d": { ms: 30 * 24 * 60 * 60 * 1000, label: "last 30 days", group: "datetimeDay" }
+  "7d": { ms: 7 * 24 * 60 * 60 * 1000, label: "last 7 days", group: "date" },
+  "30d": { ms: 30 * 24 * 60 * 60 * 1000, label: "last 30 days", group: "date" }
 };
 
 export function json(data, status = 200) {
