@@ -1,4 +1,4 @@
-import { json, getRange, listZones, queryCloudflare } from "../_shared/cf.js";
+import { json, getRange, listZones, queryCloudflare, splitRange } from "../_shared/cf.js";
 
 const CACHE_HIT_STATUSES = new Set(["hit", "stale", "revalidated", "updating"]);
 
@@ -142,7 +142,7 @@ function mergeRows(rowLists) {
   return [...byLabel.values()].sort((a, b) => (b.requests || b.bytes || 0) - (a.requests || a.bytes || 0));
 }
 
-async function fetchZone(env, zoneTag, groupKey, filter) {
+async function fetchZoneChunk(env, zoneTag, groupKey, filter) {
   const data = await queryCloudflare(env, buildQuery(groupKey), { zoneTag, filter });
   const zone = data.viewer?.zones?.[0];
   if (!zone) return null;
@@ -159,6 +159,39 @@ async function fetchZone(env, zoneTag, groupKey, filter) {
   };
 }
 
+async function fetchZone(env, zoneTag, groupKey, since, until, hostname) {
+  const chunks = splitRange(since, until);
+  const results = await Promise.all(
+    chunks.map((chunk) =>
+      fetchZoneChunk(
+        env,
+        zoneTag,
+        groupKey,
+        getFilter({ since: chunk.since.toISOString(), until: chunk.until.toISOString(), hostname })
+      )
+    )
+  );
+
+  const valid = results.filter(Boolean);
+  if (!valid.length) return null;
+
+  const totals = valid.reduce((acc, chunk) => {
+    acc.visits += chunk.totals.visits;
+    acc.requests += chunk.totals.requests;
+    acc.bytes += chunk.totals.bytes;
+    acc.cachedBytes += chunk.totals.cachedBytes;
+    return acc;
+  }, { visits: 0, requests: 0, bytes: 0, cachedBytes: 0 });
+
+  return {
+    totals,
+    timeseries: mergeSeries(valid.map((chunk) => chunk.timeseries)),
+    paths: mergeRows(valid.map((chunk) => chunk.paths)),
+    countries: mergeRows(valid.map((chunk) => chunk.countries)),
+    statuses: mergeRows(valid.map((chunk) => chunk.statuses))
+  };
+}
+
 export async function onRequestGet({ request, env }) {
   if (!env.CLOUDFLARE_API_TOKEN) {
     return json({ error: "Missing CLOUDFLARE_API_TOKEN secret on the Pages project or Worker." }, 500);
@@ -172,7 +205,6 @@ export async function onRequestGet({ request, env }) {
 
   const until = new Date();
   const since = new Date(until.getTime() - range.ms);
-  const filter = getFilter({ since: since.toISOString(), until: until.toISOString(), hostname });
 
   try {
     const explicitTag = zoneTagParam || env.DEFAULT_ZONE_TAG || "";
@@ -187,7 +219,7 @@ export async function onRequestGet({ request, env }) {
     const results = await Promise.all(
       targets.map(async (target) => {
         try {
-          const zoneData = await fetchZone(env, target.id, range.group, filter);
+          const zoneData = await fetchZone(env, target.id, range.group, since, until, hostname);
           return zoneData ? { ...target, ...zoneData } : { ...target, error: "No data returned for this zone." };
         } catch (error) {
           return { ...target, error: error.message };

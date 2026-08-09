@@ -22,6 +22,19 @@ export function getRange(value) {
   return RANGE_CONFIG[value] || RANGE_CONFIG["24h"];
 }
 
+const MAX_QUERY_RANGE_MS = 24 * 60 * 60 * 1000;
+
+export function splitRange(since, until, maxMs = MAX_QUERY_RANGE_MS) {
+  const chunks = [];
+  let cursor = since;
+  while (cursor < until) {
+    const chunkEnd = new Date(Math.min(cursor.getTime() + maxMs, until.getTime()));
+    chunks.push({ since: cursor, until: chunkEnd });
+    cursor = chunkEnd;
+  }
+  return chunks;
+}
+
 export async function listZones(env) {
   const zones = [];
   let page = 1;
