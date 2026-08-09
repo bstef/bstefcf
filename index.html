@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏠</text></svg>">
+<link rel="stylesheet" href="/site-nav.css">
 <title>bstef.pages.dev</title>
 <style>
   :root {
@@ -119,18 +120,6 @@
     border: 1px dashed var(--border);
     color: var(--muted);
   }
-  footer {
-    text-align: center;
-    margin-top: 56px;
-    font-size: 13px;
-    color: var(--muted);
-  }
-  footer a {
-    color: var(--muted);
-    text-decoration: none;
-    border-bottom: 1px solid rgba(255,255,255,0.15);
-  }
-  footer a:hover { color: var(--accent); border-color: var(--accent); }
 </style>
 </head>
 <body>
@@ -141,41 +130,10 @@
       <p class="sub">This index sits at the root while individual pages and experiments live at their own paths below.</p>
     </header>
 
-    <div class="grid">
-      <a class="page-card" href="/perodic.html">
-        <div class="icon">⚛️</div>
-        <h3>Periodic Table</h3>
-        <p>Interactive elements reference</p>
-      </a>
-      <a class="page-card" href="/qr.html">
-        <div class="icon">▦</div>
-        <h3>QR Generator</h3>
-        <p>Create QR codes on the fly</p>
-      </a>
-      <a class="page-card" href="/whois.html">
-        <div class="icon">◎</div>
-        <h3>Whois Lookup</h3>
-        <p>Domain &amp; IP information</p>
-      </a>
-      <a class="page-card" href="/fork-sync.html">
-        <div class="icon">⑂</div>
-        <h3>Fork Sync Report</h3>
-        <p>GitHub fork sync status</p>
-      </a>
-      <a class="page-card" href="/cloudflare.html">
-        <div class="icon">☁️</div>
-        <h3>Cloudflare Dashboard</h3>
-        <p>Zone &amp; traffic overview</p>
-      </a>
-      <div class="page-card empty">
-        <div class="icon">+</div>
-        <p>More coming soon</p>
-      </div>
-    </div>
+    <div class="grid" id="app-grid"></div>
 
-    <footer>
-      <a href="https://bstef.com">bstef.com</a> · <a href="https://github.com/bstef/bstefcf">source</a>
-    </footer>
+    <div id="site-footer"></div>
   </div>
+  <script src="/site-nav.js" defer></script>
 </body>
 </html>

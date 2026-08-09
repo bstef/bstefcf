@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍴</text></svg>">
+<link rel="stylesheet" href="/site-nav.css">
 <title>🍴 GitHub Fork Sync Report — bstef.pages.dev</title>
 <style>
   :root {
@@ -33,14 +34,6 @@
     padding: 60px 24px;
   }
   .wrap { max-width: 880px; margin: 0 auto; }
-  a.back {
-    display: inline-block;
-    margin-bottom: 28px;
-    color: var(--muted);
-    text-decoration: none;
-    font-size: 13px;
-  }
-  a.back:hover { color: var(--accent); }
   header { margin-bottom: 28px; }
   .tag {
     display: inline-block;
@@ -193,7 +186,7 @@
 </head>
 <body>
 <div class="wrap">
-  <a class="back" href="/index.html">&larr; back to bstef.pages.dev</a>
+  <div id="site-back"></div>
 
   <header>
     <div class="tag">&#9679; github-branch-update-check</div>
@@ -241,10 +234,13 @@
   </div>
 
   <footer>
-    Auto-updated by the <code>github-branch-update-check</code> scheduled task &middot; <a href="https://github.com/bstef/bstefcf">source</a>
+    Auto-updated by the <code>github-branch-update-check</code> scheduled task
   </footer>
+
+  <div id="site-footer"></div>
 </div>
 
+<script src="/site-nav.js" defer></script>
 <script>
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, function(c) {

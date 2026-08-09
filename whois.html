@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔍</text></svg>">
+<link rel="stylesheet" href="/site-nav.css">
 <title>WHOIS Spam Investigator</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
@@ -541,6 +542,8 @@
 <body>
 <div class="container">
 
+  <div id="site-back"></div>
+
   <header>
     <div class="logo-icon">🔍</div>
     <div>
@@ -644,8 +647,11 @@
     <div id="history-list"></div>
   </div>
 
+  <div id="site-footer"></div>
+
 </div>
 
+<script src="/site-nav.js" defer></script>
 <script>
 // ─── State ───────────────────────────────────────────────────────
 let history = JSON.parse(localStorage.getItem('whois_history') || '[]');
