@@ -356,9 +356,9 @@
         <div id="cachedSub" class="sub">Bytes served from cache</div>
       </article>
       <article class="metric">
-        <div class="name">Threats</div>
-        <div id="threats" class="value">-</div>
-        <div class="sub">Security events in traffic</div>
+        <div class="name">Errors</div>
+        <div id="errorRate" class="value">-</div>
+        <div class="sub">4xx / 5xx response rate</div>
       </article>
       <article class="metric">
         <div class="name">Cache Ratio</div>
@@ -582,7 +582,7 @@
       $("requests").textContent = fmtNum(totals.requests);
       $("bytes").textContent = fmtBytes(totals.bytes);
       $("cached").textContent = fmtBytes(totals.cachedBytes);
-      $("threats").textContent = fmtNum(totals.threats);
+      $("errorRate").textContent = totals.requests ? `${Math.round((totals.errorRate || 0) * 100)}%` : "-";
       const ratio = totals.bytes ? (totals.cachedBytes || 0) / totals.bytes : 0;
       $("cacheRatio").textContent = `${Math.round(ratio * 100)}%`;
       $("visitsSub").textContent = `${fmtNum(totals.requestsPerVisit || 0)} requests per visit`;

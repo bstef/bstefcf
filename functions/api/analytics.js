@@ -1,5 +1,7 @@
 import { json, getRange, listZones, queryCloudflare } from "../_shared/cf.js";
 
+const CACHE_HIT_STATUSES = new Set(["hit", "stale", "revalidated", "updating"]);
+
 function getFilter({ since, until, hostname }) {
   const filter = {
     datetime_geq: since,
@@ -11,16 +13,20 @@ function getFilter({ since, until, hostname }) {
   return filter;
 }
 
-function sumGroups(groups) {
+function sumTotals(groups) {
   return groups.reduce((total, group) => {
-    const sum = group.sum || {};
-    total.visits += sum.visits || 0;
-    total.requests += sum.requests || group.count || 0;
-    total.bytes += sum.edgeResponseBytes || 0;
-    total.cachedBytes += sum.cachedBytes || 0;
-    total.threats += sum.threats || 0;
+    total.visits += group.sum?.visits || 0;
+    total.requests += group.count || 0;
+    total.bytes += group.sum?.edgeResponseBytes || 0;
     return total;
-  }, { visits: 0, requests: 0, bytes: 0, cachedBytes: 0, threats: 0 });
+  }, { visits: 0, requests: 0, bytes: 0 });
+}
+
+function sumCachedBytes(groups) {
+  return groups.reduce((total, group) => {
+    const status = (group.dimensions?.cacheStatus || "").toLowerCase();
+    return CACHE_HIT_STATUSES.has(status) ? total + (group.sum?.edgeResponseBytes || 0) : total;
+  }, 0);
 }
 
 function normalizeSeries(groups, groupKey) {
@@ -28,18 +34,20 @@ function normalizeSeries(groups, groupKey) {
     .map((group) => ({
       time: group.dimensions?.[groupKey],
       visits: group.sum?.visits || 0,
-      requests: group.sum?.requests || group.count || 0,
-      bytes: group.sum?.edgeResponseBytes || 0,
-      cachedBytes: group.sum?.cachedBytes || 0,
-      threats: group.sum?.threats || 0
+      requests: group.count || 0,
+      bytes: group.sum?.edgeResponseBytes || 0
     }))
     .filter((point) => point.time)
     .sort((a, b) => String(a.time).localeCompare(String(b.time)));
 }
 
-function normalizeRows(groups, labelGetter, valueGetter) {
+function normalizeRows(groups, labelGetter) {
   return groups
-    .map((group) => ({ label: labelGetter(group), ...valueGetter(group) }))
+    .map((group) => ({
+      label: labelGetter(group),
+      requests: group.count || 0,
+      bytes: group.sum?.edgeResponseBytes || 0
+    }))
     .filter((row) => row.label)
     .sort((a, b) => (b.requests || b.bytes || 0) - (a.requests || a.bytes || 0));
 }
@@ -54,8 +62,6 @@ function buildQuery(groupKey) {
             sum {
               visits
               edgeResponseBytes
-              cachedBytes
-              threats
             }
           }
           timeseries: httpRequestsAdaptiveGroups(limit: 100, filter: $filter) {
@@ -66,8 +72,6 @@ function buildQuery(groupKey) {
             sum {
               visits
               edgeResponseBytes
-              cachedBytes
-              threats
             }
           }
           topPaths: httpRequestsAdaptiveGroups(limit: 12, filter: $filter, orderBy: [sum_edgeResponseBytes_DESC]) {
@@ -76,7 +80,6 @@ function buildQuery(groupKey) {
               clientRequestPath
             }
             sum {
-              visits
               edgeResponseBytes
             }
           }
@@ -98,6 +101,14 @@ function buildQuery(groupKey) {
               edgeResponseBytes
             }
           }
+          cacheBreakdown: httpRequestsAdaptiveGroups(limit: 20, filter: $filter) {
+            dimensions {
+              cacheStatus
+            }
+            sum {
+              edgeResponseBytes
+            }
+          }
         }
       }
     }
@@ -108,19 +119,10 @@ function mergeSeries(seriesLists) {
   const byTime = new Map();
   for (const series of seriesLists) {
     for (const point of series) {
-      const existing = byTime.get(point.time) || {
-        time: point.time,
-        visits: 0,
-        requests: 0,
-        bytes: 0,
-        cachedBytes: 0,
-        threats: 0
-      };
+      const existing = byTime.get(point.time) || { time: point.time, visits: 0, requests: 0, bytes: 0 };
       existing.visits += point.visits;
       existing.requests += point.requests;
       existing.bytes += point.bytes;
-      existing.cachedBytes += point.cachedBytes;
-      existing.threats += point.threats;
       byTime.set(point.time, existing);
     }
   }
@@ -145,33 +147,15 @@ async function fetchZone(env, zoneTag, groupKey, filter) {
   const zone = data.viewer?.zones?.[0];
   if (!zone) return null;
 
+  const totals = sumTotals(zone.totals || []);
+  totals.cachedBytes = sumCachedBytes(zone.cacheBreakdown || []);
+
   return {
-    totals: sumGroups(zone.totals || []),
+    totals,
     timeseries: normalizeSeries(zone.timeseries || [], groupKey),
-    paths: normalizeRows(
-      zone.topPaths || [],
-      (group) => group.dimensions?.clientRequestPath || "/",
-      (group) => ({
-        requests: group.sum?.requests || group.count || 0,
-        bytes: group.sum?.edgeResponseBytes || 0
-      })
-    ),
-    countries: normalizeRows(
-      zone.countries || [],
-      (group) => group.dimensions?.clientCountryName || "Unknown",
-      (group) => ({
-        requests: group.sum?.requests || group.count || 0,
-        bytes: group.sum?.edgeResponseBytes || 0
-      })
-    ),
-    statuses: normalizeRows(
-      zone.statuses || [],
-      (group) => String(group.dimensions?.edgeResponseStatus || "Unknown"),
-      (group) => ({
-        requests: group.sum?.requests || group.count || 0,
-        bytes: group.sum?.edgeResponseBytes || 0
-      })
-    )
+    paths: normalizeRows(zone.topPaths || [], (group) => group.dimensions?.clientRequestPath || "/"),
+    countries: normalizeRows(zone.countries || [], (group) => group.dimensions?.clientCountryName || "Unknown"),
+    statuses: normalizeRows(zone.statuses || [], (group) => String(group.dimensions?.edgeResponseStatus || "Unknown"))
   };
 }
 
@@ -223,11 +207,16 @@ export async function onRequestGet({ request, env }) {
       acc.requests += zone.totals.requests;
       acc.bytes += zone.totals.bytes;
       acc.cachedBytes += zone.totals.cachedBytes;
-      acc.threats += zone.totals.threats;
       return acc;
-    }, { visits: 0, requests: 0, bytes: 0, cachedBytes: 0, threats: 0 });
+    }, { visits: 0, requests: 0, bytes: 0, cachedBytes: 0 });
     totals.requestsPerVisit = totals.visits ? totals.requests / totals.visits : 0;
     totals.bytesPerRequest = totals.requests ? totals.bytes / totals.requests : 0;
+
+    const statuses = mergeRows(valid.map((zone) => zone.statuses));
+    const errorRequests = statuses
+      .filter((row) => Number(row.label) >= 400)
+      .reduce((sum, row) => sum + (row.requests || 0), 0);
+    totals.errorRate = totals.requests ? errorRequests / totals.requests : 0;
 
     const label = explicitTag
       ? (hostname || valid[0].name || "Selected domain")
@@ -241,7 +230,7 @@ export async function onRequestGet({ request, env }) {
       timeseries: mergeSeries(valid.map((zone) => zone.timeseries)),
       paths: mergeRows(valid.map((zone) => zone.paths)),
       countries: mergeRows(valid.map((zone) => zone.countries)),
-      statuses: mergeRows(valid.map((zone) => zone.statuses)),
+      statuses,
       domains: valid.length > 1
         ? valid
             .map((zone) => ({ label: zone.name || zone.id, requests: zone.totals.requests, bytes: zone.totals.bytes }))
