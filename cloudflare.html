@@ -189,6 +189,10 @@
       min-height: 310px;
     }
 
+    .panel.collapsed {
+      min-height: 0;
+    }
+
     .wide { grid-column: span 8; }
     .side { grid-column: span 4; }
     .half { grid-column: span 6; }
@@ -199,6 +203,12 @@
       justify-content: space-between;
       gap: 14px;
       margin-bottom: 14px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .panel.collapsed .panel-head {
+      margin-bottom: 0;
     }
 
     .panel h2 {
@@ -211,6 +221,51 @@
       color: var(--muted);
       font-size: 13px;
       text-align: right;
+    }
+
+    .panel-head-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 0 0 auto;
+    }
+
+    .collapse-btn {
+      flex: 0 0 auto;
+      width: 26px;
+      height: 26px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      padding: 0;
+    }
+
+    .collapse-btn:hover {
+      color: var(--text);
+      border-color: var(--orange);
+    }
+
+    .collapse-btn svg {
+      width: 14px;
+      height: 14px;
+      transition: transform 0.15s ease;
+    }
+
+    .panel.collapsed .collapse-btn svg {
+      transform: rotate(-90deg);
+    }
+
+    .panel-body {
+      overflow: hidden;
+    }
+
+    .panel.collapsed .panel-body {
+      display: none;
     }
 
     canvas {
@@ -366,44 +421,79 @@
         <div class="sub">Cached / transferred</div>
       </article>
 
-      <article class="panel wide">
+      <article class="panel wide" data-panel="traffic">
         <div class="panel-head">
           <h2>Traffic Over Time</h2>
-          <div class="hint">requests and data transfer</div>
+          <div class="panel-head-right">
+            <div class="hint">requests and data transfer</div>
+            <button type="button" class="collapse-btn" aria-expanded="true" aria-label="Collapse Traffic Over Time">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6l4 4 4-4"/></svg>
+            </button>
+          </div>
         </div>
-        <canvas id="trafficChart" width="1200" height="320"></canvas>
+        <div class="panel-body">
+          <canvas id="trafficChart" width="1200" height="320"></canvas>
+        </div>
       </article>
 
-      <article class="panel side">
+      <article class="panel side" data-panel="countries">
         <div class="panel-head">
           <h2>Top Countries</h2>
-          <div class="hint">by requests</div>
+          <div class="panel-head-right">
+            <div class="hint">by requests</div>
+            <button type="button" class="collapse-btn" aria-expanded="true" aria-label="Collapse Top Countries">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6l4 4 4-4"/></svg>
+            </button>
+          </div>
         </div>
-        <div id="countries" class="table"></div>
+        <div class="panel-body">
+          <div id="countries" class="table"></div>
+        </div>
       </article>
 
-      <article class="panel half">
-        <div class="panel-head">
-          <h2>Top Paths</h2>
-          <div class="hint">by bandwidth</div>
-        </div>
-        <div id="paths" class="table"></div>
-      </article>
-
-      <article class="panel half">
-        <div class="panel-head">
-          <h2>Status Codes</h2>
-          <div class="hint">edge responses</div>
-        </div>
-        <div id="statuses" class="table"></div>
-      </article>
-
-      <article class="panel half" id="domainsPanel" style="display:none;">
+      <article class="panel half" id="domainsPanel" data-panel="domains" style="display:none;">
         <div class="panel-head">
           <h2>Top Domains</h2>
-          <div class="hint">by requests</div>
+          <div class="panel-head-right">
+            <div class="hint">by requests</div>
+            <button type="button" class="collapse-btn" aria-expanded="true" aria-label="Collapse Top Domains">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6l4 4 4-4"/></svg>
+            </button>
+          </div>
         </div>
-        <div id="domains" class="table"></div>
+        <div class="panel-body">
+          <div id="domains" class="table"></div>
+        </div>
+      </article>
+
+      <article class="panel half" data-panel="paths">
+        <div class="panel-head">
+          <h2>Top Paths</h2>
+          <div class="panel-head-right">
+            <div class="hint">by bandwidth</div>
+            <button type="button" class="collapse-btn" aria-expanded="true" aria-label="Collapse Top Paths">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6l4 4 4-4"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div id="paths" class="table"></div>
+        </div>
+      </article>
+
+      <article class="panel half" data-panel="statuses">
+        <div class="panel-head">
+          <h2>Status Codes</h2>
+          <div class="panel-head-right">
+            <div class="hint">edge responses</div>
+            <button type="button" class="collapse-btn" aria-expanded="true" aria-label="Collapse Status Codes">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6l4 4 4-4"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div id="statuses" class="table"></div>
+        </div>
       </article>
     </section>
   </main>
@@ -638,7 +728,29 @@
       }
     }
 
+    function initCollapsibles() {
+      document.querySelectorAll(".panel[data-panel]").forEach((panel) => {
+        const key = `cfDash:collapsed:${panel.dataset.panel}`;
+        const btn = panel.querySelector(".collapse-btn");
+        const head = panel.querySelector(".panel-head");
+
+        function setCollapsed(collapsed) {
+          panel.classList.toggle("collapsed", collapsed);
+          btn.setAttribute("aria-expanded", String(!collapsed));
+          localStorage.setItem(key, collapsed ? "1" : "0");
+        }
+
+        setCollapsed(localStorage.getItem(key) === "1");
+
+        head.addEventListener("click", (event) => {
+          if (event.target.closest("select, input, a")) return;
+          setCollapsed(!panel.classList.contains("collapsed"));
+        });
+      });
+    }
+
     loadState();
+    initCollapsibles();
     $("controls").addEventListener("submit", refresh);
     loadZones().then(refresh);
     setInterval(refresh, 5 * 60 * 1000);
