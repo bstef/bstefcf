@@ -66,6 +66,7 @@ Requires a `CLOUDFLARE_API_TOKEN` secret (scoped to `Zone → Analytics → Read
 | `functions/api/volvo/updates.js` | Best-effort car software info + this dashboard's own version/changelog |
 | `functions/api/volvo/fuel.js` | Fill-up log: list with derived MPG/cost stats (GET), add a fill-up (POST), delete one (DELETE) |
 | `functions/api/volvo/fuel-import.js` | One-time CSV import (Fuelly export or similar) to backfill fuel history |
+| `functions/api/volvo/oauth-setup.js` | One-time OAuth helper backing `volvo-setup.html` — hands back the authorize URL, then exchanges a code for tokens |
 | `functions/_shared/volvo.js` | OAuth token refresh (persisted in D1, single-flight to survive concurrent requests), the authenticated fetch wrapper, and the dashboard access-code check |
 
 Volvo's public API only reports a vehicle's *current* location, not a trip history, so this dashboard builds its own trip log: a scheduled job hits `/api/volvo/poll` every few minutes, and that endpoint derives trips from consecutive location pings stored in D1 (see `schema/volvo.sql`).
@@ -82,12 +83,14 @@ There's no public Fuelly API (confirmed via their forums — developers have ask
 
 ### One-time setup
 
-1. **Register an app** at [developer.volvocars.com](https://developer.volvocars.com), subscribe to the Connected Vehicle, Location, and (if applicable) Energy APIs, and complete the OAuth 2.0 authorization-code + PKCE flow for your own car once to obtain a `client_id`, `client_secret`, and a `refresh_token`. Note your vehicle's VIN.
-2. **Create the D1 database**: `wrangler d1 create bstefcf-volvo`, then bind it from the Cloudflare Pages dashboard (Settings → Functions → D1 database bindings → variable name `VOLVO_DB`, pointing at the database you just created). This repo has no `wrangler.toml` — deploys go through git integration, and bindings live in the dashboard, same as the `CLOUDFLARE_API_TOKEN` secret used by `cloudflare.html`.
-3. **Apply the schema**: `wrangler d1 execute bstefcf-volvo --remote --file=schema/volvo.sql`.
-4. **Set Pages environment variables/secrets**: `VOLVO_CLIENT_ID`, `VOLVO_CLIENT_SECRET`, `VOLVO_API_KEY` (the VCC API key), `VOLVO_REFRESH_TOKEN` (bootstraps the very first token exchange — after that, D1 holds the rotated token), `VOLVO_VIN`, `DASHBOARD_TOKEN` (a random string you'll type into the dashboard's login prompt), and `POLL_SECRET` (a random string that authorizes calls to `/api/volvo/poll`).
-5. **Schedule the poller**: Cloudflare Pages Functions don't support Cron Triggers directly, so `.github/workflows/volvo-poll.yml` calls `/api/volvo/poll` on a schedule instead. Set the repo secrets `VOLVO_POLL_URL` (e.g. `https://bstef.pages.dev/api/volvo/poll`) and `VOLVO_POLL_SECRET` (matching `POLL_SECRET` above).
-6. **(Recommended)** Add a Cloudflare Access policy in front of `/volvo.html` and `/api/volvo/*` for real caller authentication — see "Access control" above.
+Do these in order — each step after the first depends on the one before it.
+
+1. **Register an app** at [developer.volvocars.com](https://developer.volvocars.com) and subscribe it to the Connected Vehicle, Location, and (if applicable) Energy APIs. The app page gives you a `client_id`, `client_secret`, and a VCC API key. Also note your vehicle's VIN (from the car's registration/VIN plate, or the Volvo app).
+2. **Set the secrets you have so far** in the Cloudflare Pages dashboard (Settings → Environment variables — this repo has no `wrangler.toml`, so all bindings/secrets live there, same as `CLOUDFLARE_API_TOKEN` for `cloudflare.html`): `VOLVO_CLIENT_ID`, `VOLVO_CLIENT_SECRET`, `VOLVO_API_KEY`, `VOLVO_VIN`, and `DASHBOARD_TOKEN` (any random string — this is what you'll type into the dashboard's login prompt, not something Volvo gives you). Redeploy after adding them so the Functions can see them.
+3. **Create the D1 database**: `wrangler d1 create bstefcf-volvo`, bind it from the Pages dashboard (Settings → Functions → D1 database bindings → variable name `VOLVO_DB`), then apply the schema: `wrangler d1 execute bstefcf-volvo --remote --file=schema/volvo.sql`.
+4. **Get a refresh token** by visiting `/volvo-setup.html` on your deployed site (log in with `DASHBOARD_TOKEN` from step 2) — it walks through registering a redirect URI, picking scopes, and running the OAuth authorization-code + PKCE flow, then hands you a `refresh_token` (and saves it straight to D1 if that's already set up, so step 3 first saves you a manual copy-paste). If you do it before D1 exists, paste the returned value into a `VOLVO_REFRESH_TOKEN` secret instead — it's only used to bootstrap the very first exchange; D1 takes over from there.
+5. **Schedule the poller**: Cloudflare Pages Functions don't support Cron Triggers directly, so `.github/workflows/volvo-poll.yml` calls `/api/volvo/poll` on a schedule instead. Set the repo secrets `VOLVO_POLL_URL` (e.g. `https://bstef.pages.dev/api/volvo/poll`) and `VOLVO_POLL_SECRET` (matching a `POLL_SECRET` Pages secret you also set).
+6. **(Recommended)** Add a Cloudflare Access policy in front of `/volvo.html`, `/volvo-setup.html`, and `/api/volvo/*` for real caller authentication — see "Access control" above.
 
 ## Stack
 
