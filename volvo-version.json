@@ -1,0 +1,15 @@
+{
+  "version": "1.0.0",
+  "releasedAt": "2026-08-15",
+  "changelog": [
+    {
+      "version": "1.0.0",
+      "date": "2026-08-15",
+      "notes": [
+        "Initial release: overview & controls, trip log & map, software/app updates tabs.",
+        "Dark and light mode.",
+        "Self-hosted trip logging via periodic location polling."
+      ]
+    }
+  ]
+}
