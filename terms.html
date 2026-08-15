@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📄</text></svg>">
+<link rel="stylesheet" href="/site-nav.css">
+<title>Terms & Conditions — Volvo Dashboard</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0a0e14;
+    --panel: #10151f;
+    --line: rgba(255,255,255,0.08);
+    --text: #e5e7eb;
+    --muted: #8b93a1;
+    --accent: #5eead4;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--text); }
+  .shell { width: min(720px, calc(100vw - 32px)); margin: 0 auto; padding: 24px 0 40px; line-height: 1.65; }
+  h1 { font-size: 26px; margin: 0 0 6px; }
+  .updated { color: var(--muted); font-size: 13px; margin: 0 0 28px; }
+  h2 { font-size: 16px; margin: 28px 0 8px; color: var(--accent); }
+  p, li { font-size: 14px; color: var(--text); }
+  ul { padding-left: 20px; margin: 8px 0; }
+  a { color: var(--accent); }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 20px 24px;
+  }
+</style>
+</head>
+<body>
+  <div class="shell">
+    <div id="site-back"></div>
+    <h1>Terms &amp; Conditions</h1>
+    <p class="updated">Volvo Dashboard · Last updated 2026-08-15</p>
+
+    <div class="card">
+      <p>This page covers the personal "Volvo Dashboard" application built and operated by the site owner, reachable at this domain (including <code>/volvo.html</code> and related pages and API routes). It is not affiliated with, endorsed by, or operated by Volvo Cars — it is an independent personal project built against Volvo's publicly documented Connected Vehicle, Location, and Energy APIs.</p>
+
+      <h2>1. What this is</h2>
+      <p>Volvo Dashboard is a private, single-owner web application for viewing and controlling one specific vehicle belonging to the site owner. It is not a public service, is not offered commercially, and is not intended for use by anyone other than the owner and people the owner explicitly grants access to (e.g. a family member).</p>
+
+      <h2>2. Access</h2>
+      <p>The application is gated behind an access code known only to the owner and anyone they choose to share it with. Anyone with that code can view the vehicle's status, location, and trip history, and can send it remote commands (lock/unlock, climate control, horn/lights, engine start/stop, where supported). Sharing the access code means sharing that level of control.</p>
+
+      <h2>3. Data accessed and stored</h2>
+      <p>Through Volvo's APIs, the application reads and may act on:</p>
+      <ul>
+        <li>Vehicle status (doors, windows, tyres, warnings, diagnostics, odometer, fuel/battery level)</li>
+        <li>Current and historical location, used to derive a personal trip log</li>
+        <li>Remote commands (lock/unlock, climatization, horn/lights, engine start/stop)</li>
+      </ul>
+      <p>Location history, derived trip data, and manually logged fuel fill-ups are stored in a private database operated by the site owner (Cloudflare D1) for the sole purpose of powering this application. This data is not sold, shared with advertisers, or provided to any third party, except as required to operate the underlying infrastructure (e.g. Cloudflare as the hosting provider) or as required by law.</p>
+
+      <h2>4. No warranty</h2>
+      <p>This application is provided "as is," built and maintained by one person as a personal project, with no guarantee of accuracy, availability, or fitness for any particular purpose. Vehicle data and remote commands depend entirely on Volvo's own systems and APIs being available and accurate — this application has no control over and makes no claims about their correctness. Do not rely on it for safety-critical decisions.</p>
+
+      <h2>5. Changes</h2>
+      <p>These terms may be updated at any time as the application changes. Continued use after a change constitutes acceptance of the updated terms.</p>
+
+      <h2>6. Contact</h2>
+      <p>Questions about this application or its data handling can be sent to <a href="mailto:benjaminstef@gmail.com">benjaminstef@gmail.com</a>.</p>
+    </div>
+
+    <div id="site-footer"></div>
+  </div>
+  <script src="/site-nav.js" defer></script>
+</body>
+</html>
