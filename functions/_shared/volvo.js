@@ -1,4 +1,5 @@
 const TOKEN_URL = "https://volvoid.eu.volvocars.com/as/token.oauth2";
+export const AUTHORIZE_URL = "https://volvoid.eu.volvocars.com/as/authorization.oauth2";
 const CV_BASE = "https://api.volvocars.com/connected-vehicle/v2/vehicles";
 const LOCATION_BASE = "https://api.volvocars.com/location/v1/vehicles";
 const ENERGY_BASE = "https://api.volvocars.com/energy/v2/vehicles";
@@ -48,7 +49,7 @@ export function requireDashboardAuth(request, env) {
   }
 }
 
-async function requestToken(env, params) {
+export async function requestToken(env, params) {
   const basic = btoa(`${env.VOLVO_CLIENT_ID}:${env.VOLVO_CLIENT_SECRET}`);
   const response = await fetch(TOKEN_URL, {
     method: "POST",
@@ -72,7 +73,7 @@ async function loadStoredToken(env) {
   return row || null;
 }
 
-async function saveToken(env, { access_token, refresh_token, expires_in }) {
+export async function saveToken(env, { access_token, refresh_token, expires_in }) {
   const expiresAt = Math.floor(Date.now() / 1000) + (Number(expires_in) || 1800);
   const updatedAt = Math.floor(Date.now() / 1000);
   await env.VOLVO_DB.prepare(

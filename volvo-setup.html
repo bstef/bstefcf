@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔑</text></svg>">
+<link rel="stylesheet" href="/site-nav.css">
+<title>Volvo OAuth Setup</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0a0e14;
+    --panel: #10151f;
+    --panel-2: #161c29;
+    --line: rgba(255,255,255,0.08);
+    --text: #e5e7eb;
+    --muted: #8b93a1;
+    --accent: #5eead4;
+    --bad: #f87171;
+    --bad-bg: rgba(248,113,113,0.12);
+    --good: #4ade80;
+    --good-bg: rgba(74,222,128,0.12);
+    --shadow: 0 18px 50px rgba(0,0,0,0.35);
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--text); }
+  .shell { width: min(720px, calc(100vw - 32px)); margin: 0 auto; padding: 24px 0 40px; }
+  h1 { font-size: 24px; margin: 0 0 6px; }
+  .sub { color: var(--muted); font-size: 14px; margin: 0 0 24px; line-height: 1.6; }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 18px 20px;
+    box-shadow: var(--shadow);
+    margin-bottom: 16px;
+  }
+  .card h2 { margin: 0 0 8px; font-size: 15px; }
+  .card p { margin: 0 0 10px; color: var(--muted); font-size: 13px; line-height: 1.6; }
+  .step-num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 20px; height: 20px; border-radius: 50%;
+    background: var(--accent); color: var(--bg); font-size: 12px; font-weight: 700;
+    margin-right: 8px;
+  }
+  input, textarea {
+    width: 100%;
+    font: inherit;
+    font-size: 13px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    padding: 10px 11px;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    background: var(--panel-2);
+    color: var(--text);
+    resize: vertical;
+  }
+  textarea { min-height: 90px; }
+  input:focus, textarea:focus { outline: none; border-color: var(--accent); }
+  .row { display: flex; gap: 8px; align-items: flex-start; }
+  .row input, .row textarea { flex: 1; }
+  button {
+    font: inherit;
+    cursor: pointer;
+    border: 1px solid var(--line);
+    background: var(--panel-2);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 9px 14px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+  button:hover { border-color: var(--accent); }
+  button.primary {
+    background: var(--accent);
+    color: var(--bg);
+    border-color: var(--accent);
+    font-weight: 700;
+  }
+  button:disabled { opacity: 0.5; cursor: wait; }
+  .status { font-size: 13px; margin-top: 10px; }
+  .status.error { color: var(--bad); }
+  .status.ok { color: var(--good); }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 6px; }
+
+  .auth-overlay {
+    position: fixed; inset: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--bg); padding: 24px;
+  }
+  .auth-overlay.hidden { display: none; }
+  .auth-card { width: min(340px, 100%); text-align: center; }
+  .auth-card input { margin: 12px 0; }
+</style>
+</head>
+<body>
+  <div class="auth-overlay" id="auth-overlay">
+    <form class="card auth-card" id="auth-form">
+      <div style="font-size:28px;">🔑</div>
+      <h2>Enter access code</h2>
+      <p>Same code as the main dashboard.</p>
+      <input type="password" id="auth-input" autocomplete="current-password" placeholder="Access code" required>
+      <p class="status error" id="auth-error"></p>
+      <button type="submit" class="primary" style="width:100%;">Unlock</button>
+    </form>
+  </div>
+
+  <div class="shell">
+    <div id="site-back"></div>
+    <h1>🔑 Volvo OAuth Setup</h1>
+    <p class="sub">One-time helper to complete Volvo's OAuth authorization-code + PKCE flow and get a <code>refresh_token</code> for the dashboard — without hand-building URLs or copy-pasting a code challenge. Run this once per vehicle/app registration.</p>
+
+    <div class="card">
+      <h2><span class="step-num">1</span>Register this exact redirect URI</h2>
+      <p>In your Volvo developer app settings, set the redirect/callback URI to this page's own URL — Volvo will send the browser back here with the authorization code.</p>
+      <div class="row">
+        <input type="text" id="redirect-uri" readonly>
+        <button id="copy-redirect">Copy</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2><span class="step-num">2</span>Scopes</h2>
+      <p>Best-effort starting point — <strong>verify against your app's actual API subscriptions</strong> on developer.volvocars.com and edit if theirs differs. Wrong/missing scopes won't error here; they'll just silently withhold that data later.</p>
+      <textarea id="scopes">openid conve:fuel_status conve:battery_charge_level conve:odometer_status conve:trip_statistics conve:diagnostics_engine_status conve:diagnostics_workshop conve:doors_status conve:engine_status conve:environment conve:windows_status conve:tyre_status conve:warnings conve:brake_status conve:navigation conve:lock conve:lock_status conve:unlock conve:command_accessibility conve:commands conve:climatization_start_stop conve:honk_flash conve:vehicle_relation energy:state energy:capability location:read</textarea>
+    </div>
+
+    <div class="card">
+      <h2><span class="step-num">3</span>Authorize</h2>
+      <p>Requires <code>VOLVO_CLIENT_ID</code> and <code>VOLVO_CLIENT_SECRET</code> already set as Cloudflare Pages secrets. Clicking this takes you to Volvo's login — sign in as the vehicle owner and grant consent, and you'll land back here automatically.</p>
+      <button class="primary" id="start-auth">Start authorization →</button>
+      <p class="status" id="auth-status"></p>
+    </div>
+
+    <div class="card" id="result-card" style="display:none;">
+      <h2><span class="step-num">4</span>Done</h2>
+      <p id="result-message"></p>
+      <div class="row">
+        <textarea id="refresh-token-out" readonly></textarea>
+        <button id="copy-refresh">Copy</button>
+      </div>
+      <p class="hint">Paste this into the <code>VOLVO_REFRESH_TOKEN</code> secret on the Pages project (Settings → Environment variables), then redeploy. If it says it saved directly to the database, that step is optional — D1 already has it.</p>
+    </div>
+  </div>
+
+  <script src="/site-nav.js" defer></script>
+  <script>
+  (function () {
+    "use strict";
+
+    var state = { token: localStorage.getItem("volvo-dashboard-token") || "" };
+
+    function authHeaders(extra) {
+      return Object.assign({ authorization: "Bearer " + state.token }, extra || {});
+    }
+
+    function lockDashboard(message) {
+      state.token = "";
+      localStorage.removeItem("volvo-dashboard-token");
+      document.getElementById("auth-overlay").classList.remove("hidden");
+      document.getElementById("auth-error").textContent = message || "";
+    }
+
+    function b64url(bytes) {
+      var bin = "";
+      for (var i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+      return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    }
+
+    function randomString(len) {
+      var bytes = new Uint8Array(len);
+      crypto.getRandomValues(bytes);
+      return b64url(bytes);
+    }
+
+    async function sha256(input) {
+      var data = new TextEncoder().encode(input);
+      var digest = await crypto.subtle.digest("SHA-256", data);
+      return b64url(new Uint8Array(digest));
+    }
+
+    function redirectUri() {
+      return location.origin + location.pathname;
+    }
+
+    document.getElementById("redirect-uri").value = redirectUri();
+    document.getElementById("copy-redirect").addEventListener("click", function () {
+      navigator.clipboard.writeText(redirectUri());
+    });
+    document.getElementById("copy-refresh").addEventListener("click", function () {
+      navigator.clipboard.writeText(document.getElementById("refresh-token-out").value);
+    });
+
+    document.getElementById("start-auth").addEventListener("click", async function () {
+      var btn = this;
+      var statusEl = document.getElementById("auth-status");
+      btn.disabled = true;
+      statusEl.className = "status";
+      statusEl.textContent = "Preparing…";
+      try {
+        var res = await fetch("/api/volvo/oauth-setup", { headers: authHeaders() });
+        if (res.status === 401) { lockDashboard("Access code incorrect or expired."); return; }
+        var info = await res.json();
+        if (!res.ok || info.error) throw new Error(info.error || "Couldn't load client info.");
+
+        var verifier = randomString(64);
+        var challenge = await sha256(verifier);
+        var authState = randomString(16);
+        sessionStorage.setItem("volvo-oauth-verifier", verifier);
+        sessionStorage.setItem("volvo-oauth-state", authState);
+
+        var url = new URL(info.authorizeUrl);
+        url.searchParams.set("response_type", "code");
+        url.searchParams.set("client_id", info.clientId);
+        url.searchParams.set("redirect_uri", redirectUri());
+        url.searchParams.set("scope", document.getElementById("scopes").value.trim());
+        url.searchParams.set("code_challenge", challenge);
+        url.searchParams.set("code_challenge_method", "S256");
+        url.searchParams.set("state", authState);
+
+        window.location.href = url.toString();
+      } catch (err) {
+        statusEl.className = "status error";
+        statusEl.textContent = err.message;
+        btn.disabled = false;
+      }
+    });
+
+    async function handleRedirectBack() {
+      var params = new URLSearchParams(location.search);
+      var code = params.get("code");
+      var returnedState = params.get("state");
+      var errorParam = params.get("error");
+      if (!code && !errorParam) return;
+
+      history.replaceState({}, "", redirectUri());
+      var statusEl = document.getElementById("auth-status");
+
+      if (errorParam) {
+        statusEl.className = "status error";
+        statusEl.textContent = "Volvo returned an error: " + errorParam + (params.get("error_description") ? " — " + params.get("error_description") : "");
+        return;
+      }
+
+      var expectedState = sessionStorage.getItem("volvo-oauth-state");
+      var verifier = sessionStorage.getItem("volvo-oauth-verifier");
+      if (!verifier || returnedState !== expectedState) {
+        statusEl.className = "status error";
+        statusEl.textContent = "State mismatch or lost session — start over (this can happen if you switched browsers/tabs mid-flow).";
+        return;
+      }
+
+      statusEl.className = "status";
+      statusEl.textContent = "Exchanging code for tokens…";
+      try {
+        var res = await fetch("/api/volvo/oauth-setup", {
+          method: "POST",
+          headers: authHeaders({ "content-type": "application/json" }),
+          body: JSON.stringify({ code: code, codeVerifier: verifier, redirectUri: redirectUri() })
+        });
+        if (res.status === 401) { lockDashboard("Access code incorrect or expired."); return; }
+        var result = await res.json();
+        if (!res.ok || result.error) throw new Error(result.error || "Exchange failed.");
+
+        sessionStorage.removeItem("volvo-oauth-verifier");
+        sessionStorage.removeItem("volvo-oauth-state");
+        statusEl.className = "status ok";
+        statusEl.textContent = "Success.";
+
+        document.getElementById("result-card").style.display = "block";
+        document.getElementById("result-message").textContent = result.savedToD1
+          ? "Saved directly to the D1 database — the dashboard can use it right away. Here's the refresh token for your records too:"
+          : "VOLVO_DB isn't set up yet, so this wasn't saved anywhere automatically — copy it into the VOLVO_REFRESH_TOKEN secret below.";
+        document.getElementById("refresh-token-out").value = result.refreshToken;
+      } catch (err) {
+        statusEl.className = "status error";
+        statusEl.textContent = err.message;
+      }
+    }
+
+    document.getElementById("auth-form").addEventListener("submit", async function (e) {
+      e.preventDefault();
+      var candidate = document.getElementById("auth-input").value;
+      if (!candidate) return;
+      state.token = candidate;
+      try {
+        var res = await fetch("/api/volvo/oauth-setup", { headers: authHeaders() });
+        if (res.status === 401) {
+          state.token = "";
+          document.getElementById("auth-error").textContent = "Incorrect access code.";
+          return;
+        }
+        localStorage.setItem("volvo-dashboard-token", candidate);
+        document.getElementById("auth-overlay").classList.add("hidden");
+        handleRedirectBack();
+      } catch (err) {
+        document.getElementById("auth-error").textContent = "Couldn't reach the dashboard backend: " + err.message;
+        state.token = "";
+      }
+    });
+
+    if (state.token) {
+      document.getElementById("auth-overlay").classList.add("hidden");
+      handleRedirectBack();
+    }
+  })();
+  </script>
+</body>
+</html>
