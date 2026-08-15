@@ -1,0 +1,942 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚗</text></svg>">
+<link rel="stylesheet" href="/site-nav.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<title>Volvo Dashboard</title>
+<style>
+  :root {
+    --bg: #0a0e14;
+    --panel: #10151f;
+    --panel-2: #161c29;
+    --line: rgba(255,255,255,0.08);
+    --text: #e5e7eb;
+    --muted: #8b93a1;
+    --accent: #5eead4;
+    --accent-strong: #2dd4bf;
+    --good: #4ade80;
+    --good-bg: rgba(74,222,128,0.12);
+    --bad: #f87171;
+    --bad-bg: rgba(248,113,113,0.12);
+    --warn: #facc15;
+    --warn-bg: rgba(250,204,21,0.12);
+    --shadow: 0 18px 50px rgba(0,0,0,0.35);
+    --font: Inter, "SF Pro Display", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Consolas, monospace;
+  }
+
+  html[data-theme="light"] {
+    --bg: #f3f5f9;
+    --panel: #ffffff;
+    --panel-2: #f3f5f9;
+    --line: rgba(15,23,42,0.1);
+    --text: #12151c;
+    --muted: #5b6472;
+    --accent: #0f9488;
+    --accent-strong: #0d7d72;
+    --good: #16a34a;
+    --good-bg: rgba(22,163,74,0.1);
+    --bad: #dc2626;
+    --bad-bg: rgba(220,38,38,0.1);
+    --warn: #b45309;
+    --warn-bg: rgba(180,83,9,0.12);
+    --shadow: 0 12px 34px rgba(15,23,42,0.1);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+  }
+
+  .shell {
+    width: min(1320px, calc(100vw - 32px));
+    margin: 0 auto;
+    padding: 22px 0 40px;
+  }
+
+  header.top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+  }
+
+  .title h1 {
+    margin: 0;
+    font-size: clamp(24px, 3.4vw, 34px);
+    letter-spacing: -0.01em;
+  }
+  .title p {
+    margin: 6px 0 0;
+    color: var(--muted);
+    font-size: 14px;
+  }
+
+  .top-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .icon-btn, .pill-btn {
+    font: inherit;
+    cursor: pointer;
+    border: 1px solid var(--line);
+    background: var(--panel);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 9px 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+  }
+  .icon-btn:hover, .pill-btn:hover { border-color: var(--accent); }
+  .icon-btn:disabled, .pill-btn:disabled { opacity: 0.5; cursor: wait; }
+
+  .status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--muted);
+    display: inline-block;
+  }
+  .status-dot.ok { background: var(--good); box-shadow: 0 0 0 4px var(--good-bg); }
+  .status-dot.bad { background: var(--bad); box-shadow: 0 0 0 4px var(--bad-bg); }
+
+  nav.tabs {
+    display: flex;
+    gap: 6px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 20px;
+    overflow-x: auto;
+  }
+  nav.tabs button {
+    font: inherit;
+    cursor: pointer;
+    background: none;
+    border: none;
+    color: var(--muted);
+    padding: 10px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+  }
+  nav.tabs button.active { color: var(--text); border-color: var(--accent); }
+
+  .tabpanel { display: none; }
+  .tabpanel.active { display: block; }
+
+  .banner {
+    display: none;
+    padding: 12px 14px;
+    border-radius: 8px;
+    background: var(--bad-bg);
+    color: var(--bad);
+    border: 1px solid var(--bad);
+    font-size: 13px;
+    margin-bottom: 16px;
+  }
+  .banner.show { display: block; }
+
+  .hero {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .hero-card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 16px 18px;
+    box-shadow: var(--shadow);
+  }
+  .hero-card .label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .hero-card .value {
+    font-family: var(--mono);
+    font-size: 24px;
+    font-weight: 600;
+  }
+  .hero-card .sub { margin-top: 4px; font-size: 12px; color: var(--muted); }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .badge.good { color: var(--good); background: var(--good-bg); }
+  .badge.bad { color: var(--bad); background: var(--bad-bg); }
+  .badge.warn { color: var(--warn); background: var(--warn-bg); }
+  .badge.neutral { color: var(--muted); background: var(--panel-2); }
+
+  .grid-cols {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 12px;
+  }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 16px 18px;
+    box-shadow: var(--shadow);
+  }
+  .card h2 {
+    margin: 0 0 12px;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+  }
+  .card.span-2 { grid-column: span 2; }
+  @media (max-width: 720px) { .card.span-2 { grid-column: span 1; } }
+
+  .kv-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--line);
+    font-size: 13px;
+  }
+  .kv-row:last-child { border-bottom: none; }
+  .kv-row .k { color: var(--muted); }
+  .kv-row .v { font-family: var(--mono); text-align: right; }
+
+  .empty-note { color: var(--muted); font-size: 13px; padding: 6px 0; }
+
+  .controls-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+  }
+  .cmd-btn {
+    font: inherit;
+    cursor: pointer;
+    border: 1px solid var(--line);
+    background: var(--panel-2);
+    color: var(--text);
+    border-radius: 10px;
+    padding: 14px 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    transition: border-color 0.15s ease, transform 0.1s ease;
+  }
+  .cmd-btn .emoji { font-size: 20px; }
+  .cmd-btn:hover { border-color: var(--accent); transform: translateY(-1px); }
+  .cmd-btn:disabled { opacity: 0.55; cursor: wait; }
+  .cmd-btn.confirming { border-color: var(--warn); color: var(--warn); }
+  .cmd-btn.sensitive { border-color: rgba(248,113,113,0.35); }
+
+  /* Trips tab */
+  .trips-layout {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    gap: 14px;
+  }
+  @media (max-width: 860px) { .trips-layout { grid-template-columns: 1fr; } }
+
+  .trip-toolbar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+  select {
+    font: inherit;
+    background: var(--panel);
+    color: var(--text);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 8px 10px;
+  }
+
+  .trip-list {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    max-height: 620px;
+    overflow-y: auto;
+  }
+  .trip-item {
+    width: 100%;
+    text-align: left;
+    font: inherit;
+    cursor: pointer;
+    background: none;
+    border: none;
+    border-bottom: 1px solid var(--line);
+    color: var(--text);
+    padding: 12px 14px;
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .trip-item:hover, .trip-item.selected { background: var(--panel-2); }
+  .trip-item .meta { font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .trip-item .dist { font-family: var(--mono); font-weight: 600; white-space: nowrap; }
+
+  .map-wrap {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    min-height: 620px;
+    display: flex;
+    flex-direction: column;
+  }
+  #map { flex: 1; min-height: 500px; }
+  .map-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--line);
+    font-size: 13px;
+  }
+
+  .changelog li { margin-bottom: 6px; font-size: 13px; color: var(--muted); }
+  .new-badge {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    background: var(--accent);
+    color: var(--bg);
+  }
+
+  .skeleton {
+    color: var(--muted);
+    font-size: 13px;
+    padding: 30px 0;
+    text-align: center;
+  }
+
+  /* Light-theme overrides for shared site-nav chrome (higher specificity wins) */
+  html[data-theme="light"] #site-back a,
+  html[data-theme="light"] .site-footer-nav a,
+  html[data-theme="light"] .site-footer-meta a {
+    color: rgba(15,23,42,0.55);
+    border-color: rgba(15,23,42,0.15);
+  }
+  html[data-theme="light"] #site-back a:hover,
+  html[data-theme="light"] .site-footer-nav a:hover,
+  html[data-theme="light"] .site-footer-meta a:hover {
+    color: rgba(15,23,42,0.95);
+    border-color: rgba(15,23,42,0.5);
+  }
+  html[data-theme="light"] #site-footer {
+    border-color: rgba(15,23,42,0.1);
+    color: rgba(15,23,42,0.5);
+  }
+</style>
+</head>
+<body>
+  <div class="shell">
+    <div id="site-back"></div>
+
+    <header class="top">
+      <div class="title">
+        <h1>🚗 Volvo Dashboard</h1>
+        <p><span id="vin-label">Loading vehicle&hellip;</span> · <span id="last-updated">&mdash;</span></p>
+      </div>
+      <div class="top-actions">
+        <span class="status-dot" id="conn-dot"></span>
+        <button class="icon-btn" id="unit-toggle" title="Toggle km/mi">km</button>
+        <button class="icon-btn" id="theme-toggle" title="Toggle dark/light">🌙</button>
+        <button class="icon-btn" id="refresh-btn" title="Refresh">⟳ Refresh</button>
+      </div>
+    </header>
+
+    <div class="banner" id="error-banner"></div>
+
+    <nav class="tabs">
+      <button class="tab-btn active" data-tab="overview">Overview &amp; Controls</button>
+      <button class="tab-btn" data-tab="trips">Trips &amp; Map</button>
+      <button class="tab-btn" data-tab="updates">Updates</button>
+    </nav>
+
+    <section class="tabpanel active" id="tab-overview">
+      <div class="hero" id="hero-row">
+        <div class="skeleton">Loading vehicle status&hellip;</div>
+      </div>
+      <div class="grid-cols" id="overview-grid"></div>
+    </section>
+
+    <section class="tabpanel" id="tab-trips">
+      <div class="trips-layout">
+        <div>
+          <div class="trip-toolbar">
+            <select id="trip-range">
+              <option value="7">Last 7 days</option>
+              <option value="30" selected>Last 30 days</option>
+              <option value="90">Last 90 days</option>
+            </select>
+            <span class="empty-note" id="trip-summary"></span>
+          </div>
+          <div class="trip-list" id="trip-list">
+            <div class="skeleton">Loading trips&hellip;</div>
+          </div>
+        </div>
+        <div class="map-wrap">
+          <div class="map-toolbar">
+            <span id="map-caption">Live location</span>
+            <button class="pill-btn" id="map-live-btn">📍 Live location</button>
+          </div>
+          <div id="map"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="tabpanel" id="tab-updates">
+      <div class="grid-cols">
+        <div class="card">
+          <h2>Car software</h2>
+          <p class="empty-note">Volvo doesn't publicly expose an "update available" flag — this is the last vehicle/software info the API reports.</p>
+          <div id="car-software-kv"><div class="skeleton">Loading&hellip;</div></div>
+        </div>
+        <div class="card">
+          <h2>Dashboard app <span id="app-new-badge"></span></h2>
+          <div id="app-version-block"><div class="skeleton">Loading&hellip;</div></div>
+        </div>
+      </div>
+    </section>
+
+    <div id="site-footer"></div>
+  </div>
+
+  <script src="/site-nav.js" defer></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script>
+  (function () {
+    "use strict";
+
+    var COMMAND_META = {
+      "lock": { label: "Lock", emoji: "🔒" },
+      "unlock": { label: "Unlock", emoji: "🔓", sensitive: true },
+      "lock-reduced-guard": { label: "Lock (reduced guard)", emoji: "🔐" },
+      "climatization-start": { label: "Climate on", emoji: "❄️" },
+      "climatization-stop": { label: "Climate off", emoji: "🛑" },
+      "flash": { label: "Flash lights", emoji: "💡" },
+      "honk": { label: "Honk", emoji: "📢" },
+      "honk-and-flash": { label: "Honk & flash", emoji: "🚨" },
+      "engine-start": { label: "Start engine", emoji: "🔑", sensitive: true },
+      "engine-stop": { label: "Stop engine", emoji: "⏹️" }
+    };
+
+    var state = {
+      theme: localStorage.getItem("volvo-theme") || (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark"),
+      unit: localStorage.getItem("volvo-unit") || "km",
+      map: null,
+      liveMarker: null,
+      routeLayer: null,
+      selectedTripId: null
+    };
+
+    function applyTheme() {
+      document.documentElement.setAttribute("data-theme", state.theme);
+      document.getElementById("theme-toggle").textContent = state.theme === "dark" ? "🌙" : "☀️";
+      if (state.map) setTileLayer();
+    }
+
+    function toggleTheme() {
+      state.theme = state.theme === "dark" ? "light" : "dark";
+      localStorage.setItem("volvo-theme", state.theme);
+      applyTheme();
+    }
+
+    function applyUnit() {
+      document.getElementById("unit-toggle").textContent = state.unit;
+    }
+
+    function toggleUnit() {
+      state.unit = state.unit === "km" ? "mi" : "km";
+      localStorage.setItem("volvo-unit", state.unit);
+      applyUnit();
+      loadOverview();
+      loadTrips();
+    }
+
+    function fmtDistance(km) {
+      if (km == null || isNaN(km)) return "—";
+      if (state.unit === "mi") return (km * 0.621371).toFixed(1) + " mi";
+      return km.toFixed(1) + " km";
+    }
+
+    function humanizeKey(key) {
+      return key
+        .replace(/([a-z])([A-Z])/g, "$1 $2")
+        .replace(/[_-]+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+        .replace(/\b\w/g, function (c) { return c.toUpperCase(); });
+    }
+
+    function humanizeValue(v) {
+      if (v == null) return "—";
+      if (typeof v === "boolean") return v ? "Yes" : "No";
+      if (typeof v === "number") return String(Math.round(v * 100) / 100);
+      if (Array.isArray(v)) return v.map(humanizeValue).join(", ");
+      if (typeof v === "string") {
+        if (/^[A-Z0-9_]+$/.test(v)) return humanizeKey(v.toLowerCase());
+        return v;
+      }
+      return JSON.stringify(v);
+    }
+
+    function badgeClass(v) {
+      var s = String(v).toLowerCase();
+      if (/(unlock|open|warn|alert|fail|error|true|low)/.test(s) && !/no warning/.test(s)) return "bad";
+      if (/(lock|closed|ok|normal|good|false|none)/.test(s)) return "good";
+      return "neutral";
+    }
+
+    function unwrapField(field) {
+      if (field && typeof field === "object" && !Array.isArray(field) && "value" in field) {
+        return { value: field.value, unit: field.unit, timestamp: field.timestamp };
+      }
+      return { value: field };
+    }
+
+    function renderKvCard(container, obj, opts) {
+      opts = opts || {};
+      container.innerHTML = "";
+      if (!obj || typeof obj !== "object") {
+        container.innerHTML = '<p class="empty-note">' + (opts.emptyText || "No data reported for this vehicle.") + "</p>";
+        return;
+      }
+      var keys = Object.keys(obj).filter(function (k) { return !opts.skip || opts.skip.indexOf(k) === -1; });
+      if (!keys.length) {
+        container.innerHTML = '<p class="empty-note">' + (opts.emptyText || "No data reported for this vehicle.") + "</p>";
+        return;
+      }
+      keys.forEach(function (key) {
+        var unwrapped = unwrapField(obj[key]);
+        var row = document.createElement("div");
+        row.className = "kv-row";
+        var display = humanizeValue(unwrapped.value) + (unwrapped.unit ? " " + unwrapped.unit : "");
+        var cls = badgeClass(unwrapped.value);
+        row.innerHTML =
+          '<span class="k">' + humanizeKey(key) + '</span>' +
+          '<span class="v"><span class="badge ' + cls + '">' + display + "</span></span>";
+        container.appendChild(row);
+      });
+    }
+
+    function renderWarnings(container, warnings) {
+      container.innerHTML = "";
+      var list = Array.isArray(warnings) ? warnings : (warnings && warnings.value) || [];
+      if (!list || !list.length) {
+        container.innerHTML = '<p class="empty-note">No active warnings.</p>';
+        return;
+      }
+      list.forEach(function (w) {
+        var row = document.createElement("div");
+        row.className = "kv-row";
+        var text = typeof w === "string" ? w : (w.text || w.description || w.warning || JSON.stringify(w));
+        row.innerHTML = '<span class="k">' + humanizeValue(text) + '</span><span class="badge bad">Warning</span>';
+        container.appendChild(row);
+      });
+    }
+
+    function showError(msg) {
+      var el = document.getElementById("error-banner");
+      if (!msg) { el.classList.remove("show"); return; }
+      el.textContent = msg;
+      el.classList.add("show");
+    }
+
+    function setConnDot(ok) {
+      var dot = document.getElementById("conn-dot");
+      dot.className = "status-dot " + (ok ? "ok" : "bad");
+    }
+
+    async function api(path, options) {
+      var res = await fetch(path, options);
+      var payload = await res.json().catch(function () { return {}; });
+      if (!res.ok || payload.error) {
+        throw new Error(payload.error || ("HTTP " + res.status));
+      }
+      return payload;
+    }
+
+    // ---- Overview & Controls ----
+
+    function findLockState(doors) {
+      if (!doors) return null;
+      for (var key in doors) {
+        if (/lock/i.test(key)) return unwrapField(doors[key]).value;
+      }
+      return null;
+    }
+
+    function renderHero(vehicle) {
+      var hero = document.getElementById("hero-row");
+      hero.innerHTML = "";
+
+      var lockValue = findLockState(vehicle.doors);
+      var lockGood = lockValue && /lock/i.test(String(lockValue)) && !/unlock/i.test(String(lockValue));
+      hero.appendChild(heroCard("Locks", lockValue ? humanizeValue(lockValue) : "Unknown", lockGood ? "good" : "bad"));
+
+      var odo = vehicle.odometer && unwrapField(vehicle.odometer.odometer || vehicle.odometer);
+      hero.appendChild(heroCard("Odometer", odo && odo.value != null ? fmtDistance(odo.value) : "—", null));
+
+      var energy = vehicle.energy || {};
+      var battery = energy.batteryChargeLevel || energy.chargeLevel;
+      var fuel = vehicle.fuel && (vehicle.fuel.fuelAmount || vehicle.fuel.fuelAmountLevel);
+      if (battery) {
+        var bVal = unwrapField(battery).value;
+        hero.appendChild(heroCard("Battery", bVal != null ? bVal + "%" : "—", bVal > 20 ? "good" : "bad"));
+      } else if (fuel) {
+        var fVal = unwrapField(fuel).value;
+        hero.appendChild(heroCard("Fuel", fVal != null ? humanizeValue(fVal) : "—", null));
+      } else {
+        hero.appendChild(heroCard("Battery / Fuel", "Not reported", null));
+      }
+
+      var range = energy.electricRange || (vehicle.fuel && vehicle.fuel.distanceToEmpty);
+      hero.appendChild(heroCard("Range", range ? fmtDistance(unwrapField(range).value) : "—", null));
+    }
+
+    function heroCard(label, value, tone) {
+      var div = document.createElement("div");
+      div.className = "hero-card";
+      var cls = tone === "good" ? "good" : tone === "bad" ? "bad" : "";
+      div.innerHTML =
+        '<div class="label">' + label + '</div>' +
+        '<div class="value' + (cls ? " " + cls : "") + '">' + value + "</div>";
+      return div;
+    }
+
+    function card(title, spanTwo) {
+      var div = document.createElement("div");
+      div.className = "card" + (spanTwo ? " span-2" : "");
+      var h2 = document.createElement("h2");
+      h2.textContent = title;
+      div.appendChild(h2);
+      var body = document.createElement("div");
+      div.appendChild(body);
+      return { el: div, body: body };
+    }
+
+    async function loadOverview() {
+      try {
+        var vehicle = await api("/api/volvo/vehicle");
+        showError(null);
+        setConnDot(true);
+        document.getElementById("vin-label").textContent = "VIN " + (vehicle.vin || "").replace(/^(.{4}).+(.{4})$/, "$1••••$2");
+        document.getElementById("last-updated").textContent = "Updated " + new Date(vehicle.fetchedAt).toLocaleTimeString();
+
+        renderHero(vehicle);
+
+        var grid = document.getElementById("overview-grid");
+        grid.innerHTML = "";
+
+        var doorsCard = card("Doors");
+        renderKvCard(doorsCard.body, vehicle.doors);
+        grid.appendChild(doorsCard.el);
+
+        var windowsCard = card("Windows");
+        renderKvCard(windowsCard.body, vehicle.windows);
+        grid.appendChild(windowsCard.el);
+
+        var tyresCard = card("Tyres");
+        renderKvCard(tyresCard.body, vehicle.tyres);
+        grid.appendChild(tyresCard.el);
+
+        var engineCard = card("Engine");
+        renderKvCard(engineCard.body, vehicle.engineStatus);
+        grid.appendChild(engineCard.el);
+
+        var warningsCard = card("Warnings");
+        renderWarnings(warningsCard.body, vehicle.warnings);
+        grid.appendChild(warningsCard.el);
+
+        var diagCard = card("Diagnostics & statistics", true);
+        var merged = Object.assign({}, vehicle.diagnostics, vehicle.statistics, vehicle.brakes);
+        renderKvCard(diagCard.body, merged);
+        grid.appendChild(diagCard.el);
+
+        var controlsCard = card("Controls", true);
+        await renderControls(controlsCard.body);
+        grid.appendChild(controlsCard.el);
+
+        if (vehicle.unavailable && vehicle.unavailable.length) {
+          var note = document.createElement("p");
+          note.className = "empty-note";
+          note.style.gridColumn = "1 / -1";
+          note.textContent = "Not reported by this vehicle: " + vehicle.unavailable.map(function (u) { return humanizeKey(u.resource); }).join(", ") + ".";
+          grid.appendChild(note);
+        }
+      } catch (err) {
+        setConnDot(false);
+        showError("Couldn't load vehicle status: " + err.message);
+      }
+    }
+
+    async function renderControls(container) {
+      container.innerHTML = "";
+      var wrap = document.createElement("div");
+      wrap.className = "controls-grid";
+      container.appendChild(wrap);
+      try {
+        var res = await api("/api/volvo/commands");
+        var commands = res.commands || [];
+        if (!commands.length) {
+          wrap.innerHTML = '<p class="empty-note">No remote commands available for this vehicle.</p>';
+          return;
+        }
+        commands.forEach(function (cmd) {
+          var meta = COMMAND_META[cmd] || { label: humanizeKey(cmd), emoji: "⚙️" };
+          var btn = document.createElement("button");
+          btn.className = "cmd-btn" + (meta.sensitive ? " sensitive" : "");
+          btn.innerHTML = '<span class="emoji">' + meta.emoji + '</span><span>' + meta.label + "</span>";
+          btn.addEventListener("click", function () { handleCommandClick(btn, cmd, meta); });
+          wrap.appendChild(btn);
+        });
+      } catch (err) {
+        wrap.innerHTML = '<p class="empty-note">Couldn\'t load commands: ' + err.message + "</p>";
+      }
+    }
+
+    function handleCommandClick(btn, cmd, meta) {
+      if (meta.sensitive && !btn.dataset.confirming) {
+        btn.dataset.confirming = "1";
+        btn.classList.add("confirming");
+        var original = btn.querySelector("span:last-child").textContent;
+        btn.querySelector("span:last-child").textContent = "Tap again to confirm";
+        setTimeout(function () {
+          delete btn.dataset.confirming;
+          btn.classList.remove("confirming");
+          btn.querySelector("span:last-child").textContent = original;
+        }, 3000);
+        return;
+      }
+      sendCommand(btn, cmd, meta);
+    }
+
+    async function sendCommand(btn, cmd, meta) {
+      btn.disabled = true;
+      delete btn.dataset.confirming;
+      btn.classList.remove("confirming");
+      var labelSpan = btn.querySelector("span:last-child");
+      var original = meta.label;
+      labelSpan.textContent = "Sending…";
+      try {
+        await api("/api/volvo/command", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ command: cmd })
+        });
+        labelSpan.textContent = "Sent ✓";
+        setTimeout(function () { labelSpan.textContent = original; }, 2000);
+      } catch (err) {
+        labelSpan.textContent = "Failed";
+        showError(meta.label + " failed: " + err.message);
+        setTimeout(function () { labelSpan.textContent = original; }, 2500);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    // ---- Trips & Map ----
+
+    function setTileLayer() {
+      if (state.map._tileLayer) state.map.removeLayer(state.map._tileLayer);
+      var url = state.theme === "dark"
+        ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+        : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+      state.map._tileLayer = L.tileLayer(url, {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
+      }).addTo(state.map);
+    }
+
+    function ensureMap() {
+      if (state.map) return state.map;
+      state.map = L.map("map", { zoomControl: true }).setView([57.7, 11.9], 11);
+      setTileLayer();
+      return state.map;
+    }
+
+    async function loadLiveLocation() {
+      document.getElementById("map-caption").textContent = "Live location";
+      state.selectedTripId = null;
+      highlightSelectedTrip();
+      var map = ensureMap();
+      if (state.routeLayer) { map.removeLayer(state.routeLayer); state.routeLayer = null; }
+      try {
+        var loc = await api("/api/volvo/location");
+        var latlng = [loc.lat, loc.lon];
+        if (state.liveMarker) map.removeLayer(state.liveMarker);
+        state.liveMarker = L.marker(latlng).addTo(map).bindPopup("Current location");
+        map.setView(latlng, 14);
+      } catch (err) {
+        showError("Couldn't load live location: " + err.message);
+      }
+    }
+
+    async function loadTripDetail(id) {
+      state.selectedTripId = id;
+      highlightSelectedTrip();
+      var map = ensureMap();
+      document.getElementById("map-caption").textContent = "Trip route";
+      if (state.liveMarker) { map.removeLayer(state.liveMarker); state.liveMarker = null; }
+      if (state.routeLayer) map.removeLayer(state.routeLayer);
+      try {
+        var res = await api("/api/volvo/trips?id=" + encodeURIComponent(id));
+        var points = (res.trip.path || []).map(function (p) { return [p[0], p[1]]; });
+        if (!points.length) return;
+        state.routeLayer = L.layerGroup().addTo(map);
+        L.polyline(points, { color: getComputedStyle(document.documentElement).getPropertyValue("--accent-strong") || "#2dd4bf", weight: 4 }).addTo(state.routeLayer);
+        L.circleMarker(points[0], { radius: 6, color: "#4ade80" }).bindPopup("Start").addTo(state.routeLayer);
+        L.circleMarker(points[points.length - 1], { radius: 6, color: "#f87171" }).bindPopup("End").addTo(state.routeLayer);
+        map.fitBounds(L.latLngBounds(points), { padding: [24, 24] });
+      } catch (err) {
+        showError("Couldn't load trip route: " + err.message);
+      }
+    }
+
+    function highlightSelectedTrip() {
+      document.querySelectorAll(".trip-item").forEach(function (el) {
+        el.classList.toggle("selected", el.dataset.id === String(state.selectedTripId));
+      });
+    }
+
+    async function loadTrips() {
+      var days = document.getElementById("trip-range").value;
+      var list = document.getElementById("trip-list");
+      list.innerHTML = '<div class="skeleton">Loading trips&hellip;</div>';
+      try {
+        var res = await api("/api/volvo/trips?days=" + days);
+        document.getElementById("trip-summary").textContent = res.count + " trip" + (res.count === 1 ? "" : "s") + " · " + fmtDistance(res.totalDistanceKm) + " total";
+        if (!res.trips.length) {
+          list.innerHTML = '<p class="empty-note" style="padding:14px;">No trips logged yet for this range. Trips build up automatically as the poller runs.</p>';
+          return;
+        }
+        list.innerHTML = "";
+        res.trips.forEach(function (trip) {
+          var btn = document.createElement("button");
+          btn.className = "trip-item";
+          btn.dataset.id = trip.id;
+          var date = new Date(trip.startTime);
+          var duration = trip.durationMin != null ? trip.durationMin + " min" : "in progress";
+          btn.innerHTML =
+            '<span>' +
+              '<div>' + date.toLocaleDateString(undefined, { month: "short", day: "numeric" }) + " · " + date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) + '</div>' +
+              '<div class="meta">' + duration + (trip.status === "active" ? " · driving now" : "") + '</div>' +
+            '</span>' +
+            '<span class="dist">' + fmtDistance(trip.distanceKm) + '</span>';
+          btn.addEventListener("click", function () { loadTripDetail(trip.id); });
+          list.appendChild(btn);
+        });
+      } catch (err) {
+        list.innerHTML = '<p class="empty-note" style="padding:14px;">Couldn\'t load trips: ' + err.message + '</p>';
+      }
+    }
+
+    // ---- Updates ----
+
+    async function loadUpdates() {
+      try {
+        var res = await api("/api/volvo/updates");
+        var carEl = document.getElementById("car-software-kv");
+        var merged = Object.assign({}, res.vehicle, res.diagnostics);
+        renderKvCard(carEl, merged, { emptyText: "No software/model info reported." });
+
+        var appEl = document.getElementById("app-version-block");
+        var app = res.app;
+        if (!app) {
+          appEl.innerHTML = '<p class="empty-note">Version info unavailable.</p>';
+          return;
+        }
+        var seen = localStorage.getItem("volvo-app-version-seen");
+        var isNew = seen && seen !== app.version;
+        document.getElementById("app-new-badge").innerHTML = isNew ? '<span class="new-badge">Updated</span>' : "";
+        localStorage.setItem("volvo-app-version-seen", app.version);
+
+        var html = '<div class="kv-row"><span class="k">Version</span><span class="v">' + app.version + '</span></div>';
+        html += '<ul class="changelog">';
+        (app.changelog || []).forEach(function (entry) {
+          html += '<li><strong>' + entry.version + '</strong> — ' + entry.date + '<ul>';
+          (entry.notes || []).forEach(function (note) { html += "<li>" + note + "</li>"; });
+          html += "</ul></li>";
+        });
+        html += "</ul>";
+        appEl.innerHTML = html;
+      } catch (err) {
+        document.getElementById("car-software-kv").innerHTML = '<p class="empty-note">' + err.message + '</p>';
+      }
+    }
+
+    // ---- Tabs & wiring ----
+
+    function switchTab(name) {
+      document.querySelectorAll(".tab-btn").forEach(function (b) { b.classList.toggle("active", b.dataset.tab === name); });
+      document.querySelectorAll(".tabpanel").forEach(function (p) { p.classList.toggle("active", p.id === "tab-" + name); });
+      if (name === "trips") {
+        setTimeout(function () {
+          ensureMap().invalidateSize();
+          if (!state.map._initialized) {
+            state.map._initialized = true;
+            loadLiveLocation();
+          }
+        }, 0);
+      }
+    }
+
+    document.querySelectorAll(".tab-btn").forEach(function (btn) {
+      btn.addEventListener("click", function () { switchTab(btn.dataset.tab); });
+    });
+    document.getElementById("theme-toggle").addEventListener("click", toggleTheme);
+    document.getElementById("unit-toggle").addEventListener("click", toggleUnit);
+    document.getElementById("refresh-btn").addEventListener("click", function () {
+      loadOverview();
+      loadTrips();
+    });
+    document.getElementById("trip-range").addEventListener("change", loadTrips);
+    document.getElementById("map-live-btn").addEventListener("click", loadLiveLocation);
+
+    applyTheme();
+    applyUnit();
+    loadOverview();
+    loadTrips();
+    loadUpdates();
+  })();
+  </script>
+</body>
+</html>

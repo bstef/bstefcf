@@ -1,0 +1,26 @@
+name: Volvo trip poll
+
+on:
+  schedule:
+    # Cloudflare Pages has no built-in cron for Pages Functions, so this
+    # workflow is the scheduler: it just pings our own /api/volvo/poll
+    # endpoint, which does the actual location fetch + trip bookkeeping.
+    - cron: "*/5 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  poll:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping /api/volvo/poll
+        env:
+          POLL_URL: ${{ secrets.VOLVO_POLL_URL }}
+          POLL_SECRET: ${{ secrets.VOLVO_POLL_SECRET }}
+        run: |
+          if [ -z "$POLL_URL" ] || [ -z "$POLL_SECRET" ]; then
+            echo "Set the VOLVO_POLL_URL and VOLVO_POLL_SECRET repo secrets first (see README)." >&2
+            exit 1
+          fi
+          curl -sS -f -X POST "$POLL_URL" \
+            -H "authorization: Bearer $POLL_SECRET" \
+            -H "content-length: 0"

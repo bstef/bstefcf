@@ -16,6 +16,7 @@ This repo is deployed automatically to Cloudflare Pages on every push to `main`.
 | `whois.html` | Domain & IP whois lookup |
 | `fork-sync.html` | GitHub fork sync status report |
 | `cloudflare.html` | Cloudflare traffic/cache/error dashboard, aggregated across all domains on the account |
+| `volvo.html` | Volvo car dashboard — status, remote controls, trip log & map, software/app updates |
 
 ## Adding a new page
 
@@ -49,6 +50,31 @@ Because every page pulls from the same `SITE_APPS` array, adding one entry keeps
 | `functions/_shared/cf.js` | Shared GraphQL/REST helpers used by both endpoints |
 
 Requires a `CLOUDFLARE_API_TOKEN` secret (scoped to `Zone → Analytics → Read` and `Zone → Zone → Read`, all zones) set as a Pages environment variable — see `functions/api/analytics.js` for details.
+
+## Volvo dashboard backend
+
+`volvo.html` talks to Volvo's official [Connected Vehicle / Location / Energy APIs](https://developer.volvocars.com) through Pages Functions in `functions/api/volvo/`:
+
+| Path | Description |
+| --- | --- |
+| `functions/api/volvo/vehicle.js` | Aggregates doors, windows, odometer, tyres, warnings, diagnostics, statistics, engine status, fuel, brakes, energy |
+| `functions/api/volvo/location.js` | Current vehicle location |
+| `functions/api/volvo/commands.js` | Lists the remote commands this vehicle supports |
+| `functions/api/volvo/command.js` | Executes a remote command (lock, unlock, climatization, flash, honk, engine start/stop) |
+| `functions/api/volvo/trips.js` | Trip list / single trip detail, read from D1 |
+| `functions/api/volvo/poll.js` | Polling target — logs a location ping and runs the trip start/continue/close state machine |
+| `functions/api/volvo/updates.js` | Best-effort car software info + this dashboard's own version/changelog |
+| `functions/_shared/volvo.js` | OAuth token refresh (persisted in D1) and the authenticated fetch wrapper |
+
+Volvo's public API only reports a vehicle's *current* location, not a trip history, so this dashboard builds its own trip log: a scheduled job hits `/api/volvo/poll` every few minutes, and that endpoint derives trips from consecutive location pings stored in D1 (see `schema/volvo.sql`).
+
+### One-time setup
+
+1. **Register an app** at [developer.volvocars.com](https://developer.volvocars.com), subscribe to the Connected Vehicle, Location, and (if applicable) Energy APIs, and complete the OAuth 2.0 authorization-code + PKCE flow for your own car once to obtain a `client_id`, `client_secret`, and a `refresh_token`. Note your vehicle's VIN.
+2. **Create the D1 database**: `wrangler d1 create bstefcf-volvo`, then either paste the returned `database_id` into `wrangler.toml`, or bind it from the Cloudflare Pages dashboard (Settings → Functions → D1 database bindings → variable name `VOLVO_DB`) if this project deploys via git integration rather than `wrangler pages deploy`.
+3. **Apply the schema**: `wrangler d1 execute bstefcf-volvo --remote --file=schema/volvo.sql`.
+4. **Set Pages environment variables/secrets**: `VOLVO_CLIENT_ID`, `VOLVO_CLIENT_SECRET`, `VOLVO_API_KEY` (the VCC API key), `VOLVO_REFRESH_TOKEN` (bootstraps the very first token exchange — after that, D1 holds the rotated token), `VOLVO_VIN`, and `POLL_SECRET` (a random string that authorizes calls to `/api/volvo/poll`).
+5. **Schedule the poller**: Cloudflare Pages Functions don't support Cron Triggers directly, so `.github/workflows/volvo-poll.yml` calls `/api/volvo/poll` on a schedule instead. Set the repo secrets `VOLVO_POLL_URL` (e.g. `https://bstef.pages.dev/api/volvo/poll`) and `VOLVO_POLL_SECRET` (matching `POLL_SECRET` above).
 
 ## Stack
 
