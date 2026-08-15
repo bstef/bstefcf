@@ -1,4 +1,4 @@
-import { json, getVin, vehicleUrl, tryFetch } from "../../_shared/volvo.js";
+import { json, getVin, vehicleUrl, tryFetch, requireDashboardAuth } from "../../_shared/volvo.js";
 
 // "Software updates" for a Volvo aren't exposed as a public "update available"
 // flag anywhere in the Connected Vehicle API — this surfaces the last known
@@ -7,6 +7,7 @@ import { json, getVin, vehicleUrl, tryFetch } from "../../_shared/volvo.js";
 // Updates tab can show both without pretending Volvo tells us about OTA pushes.
 export async function onRequestGet({ request, env }) {
   try {
+    requireDashboardAuth(request, env);
     const vin = getVin(env);
     const [details, diagnostics, appVersionRes] = await Promise.all([
       tryFetch(env, vehicleUrl(vin)),
@@ -25,6 +26,6 @@ export async function onRequestGet({ request, env }) {
       app: appVersion
     });
   } catch (error) {
-    return json({ error: error.message }, 502);
+    return json({ error: error.message }, error.status || 502);
   }
 }

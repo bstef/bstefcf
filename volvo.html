@@ -345,6 +345,129 @@
     text-align: center;
   }
 
+  .fuel-form {
+    display: grid;
+    gap: 10px;
+  }
+  .fuel-form label {
+    display: grid;
+    gap: 5px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .fuel-form input[type="text"],
+  .fuel-form input[type="number"],
+  .fuel-form input[type="datetime-local"] {
+    font: inherit;
+    font-size: 14px;
+    padding: 9px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    background: var(--panel-2);
+    color: var(--text);
+  }
+  .fuel-form input:focus { outline: none; border-color: var(--accent); }
+  .fuel-checkbox {
+    flex-direction: row !important;
+    align-items: center;
+    display: flex !important;
+    gap: 8px !important;
+  }
+  .fuel-form .pill-btn, #fuel-csv-btn {
+    background: var(--accent);
+    color: var(--bg);
+    border-color: var(--accent);
+    font-weight: 700;
+    justify-content: center;
+    margin-top: 4px;
+  }
+  #fuel-csv-input {
+    width: 100%;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  .fuel-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    min-width: 620px;
+  }
+  .fuel-table th {
+    text-align: left;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--line);
+  }
+  .fuel-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--line);
+    font-family: var(--mono);
+    white-space: nowrap;
+  }
+  .fuel-table .del-btn {
+    font: inherit;
+    cursor: pointer;
+    background: none;
+    border: none;
+    color: var(--muted);
+  }
+  .fuel-table .del-btn:hover { color: var(--bad); }
+
+  .auth-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+    padding: 24px;
+  }
+  .auth-overlay.hidden { display: none; }
+  .auth-card {
+    width: min(360px, 100%);
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 28px 26px;
+    box-shadow: var(--shadow);
+    text-align: center;
+  }
+  .auth-icon { font-size: 30px; margin-bottom: 6px; }
+  .auth-card h2 { margin: 0 0 8px; font-size: 18px; }
+  .auth-card p { margin: 0 0 16px; font-size: 13px; color: var(--muted); line-height: 1.5; }
+  .auth-card input {
+    width: 100%;
+    font: inherit;
+    font-size: 15px;
+    padding: 11px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    background: var(--panel-2);
+    color: var(--text);
+    margin-bottom: 10px;
+  }
+  .auth-card input:focus { outline: none; border-color: var(--accent); }
+  .auth-error {
+    color: var(--bad);
+    font-size: 12px;
+    min-height: 16px;
+    margin: -4px 0 10px !important;
+  }
+  .auth-card .pill-btn {
+    width: 100%;
+    justify-content: center;
+    background: var(--accent);
+    color: var(--bg);
+    border-color: var(--accent);
+    font-weight: 700;
+    padding: 11px 12px;
+  }
+
   /* Light-theme overrides for shared site-nav chrome (higher specificity wins) */
   html[data-theme="light"] #site-back a,
   html[data-theme="light"] .site-footer-nav a,
@@ -365,6 +488,17 @@
 </style>
 </head>
 <body>
+  <div class="auth-overlay" id="auth-overlay">
+    <form class="auth-card" id="auth-form">
+      <div class="auth-icon">🚗🔒</div>
+      <h2>Enter access code</h2>
+      <p>This dashboard controls a real car and shows its location — it's gated behind a shared access code (<code>DASHBOARD_TOKEN</code>).</p>
+      <input type="password" id="auth-input" autocomplete="current-password" placeholder="Access code" required>
+      <p class="auth-error" id="auth-error"></p>
+      <button type="submit" class="pill-btn" id="auth-submit">Unlock</button>
+    </form>
+  </div>
+
   <div class="shell">
     <div id="site-back"></div>
 
@@ -386,6 +520,7 @@
     <nav class="tabs">
       <button class="tab-btn active" data-tab="overview">Overview &amp; Controls</button>
       <button class="tab-btn" data-tab="trips">Trips &amp; Map</button>
+      <button class="tab-btn" data-tab="fuel">Fuel</button>
       <button class="tab-btn" data-tab="updates">Updates</button>
     </nav>
 
@@ -417,6 +552,50 @@
             <button class="pill-btn" id="map-live-btn">📍 Live location</button>
           </div>
           <div id="map"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="tabpanel" id="tab-fuel">
+      <div class="hero" id="fuel-stats-row">
+        <div class="skeleton">Loading fuel stats&hellip;</div>
+      </div>
+
+      <div class="grid-cols">
+        <div class="card">
+          <h2>Log a fill-up</h2>
+          <form id="fuel-form" class="fuel-form">
+            <label>Date<input type="datetime-local" id="fuel-date" required></label>
+            <label>Odometer (mi)<input type="number" step="0.1" id="fuel-odometer" required></label>
+            <label>Gallons<input type="number" step="0.001" id="fuel-gallons" required></label>
+            <label>Price / gallon ($)<input type="number" step="0.001" id="fuel-price"></label>
+            <label>Total cost ($)<input type="number" step="0.01" id="fuel-cost"></label>
+            <label>Station<input type="text" id="fuel-station" placeholder="Optional"></label>
+            <label class="fuel-checkbox"><input type="checkbox" id="fuel-partial"> Partial fill (didn't top off)</label>
+            <button type="submit" class="pill-btn">Add fill-up</button>
+          </form>
+        </div>
+
+        <div class="card">
+          <h2>Import from Fuelly</h2>
+          <p class="empty-note">Fuelly has no public API, so export your log as CSV (vehicle page &rarr; Export Fuel-ups &rarr; All Fuelups) and upload it here once. New fill-ups can be logged natively above from then on.</p>
+          <input type="file" id="fuel-csv-input" accept=".csv,text/csv">
+          <button class="pill-btn" id="fuel-csv-btn" style="margin-top:10px;">Import CSV</button>
+          <p class="empty-note" id="fuel-csv-result"></p>
+        </div>
+
+        <div class="card span-2">
+          <h2>Fill-up history</h2>
+          <div style="overflow-x:auto;">
+            <table class="fuel-table" id="fuel-table">
+              <thead>
+                <tr><th>Date</th><th>Odometer</th><th>Gallons</th><th>$/gal</th><th>Total</th><th>MPG</th><th>Station</th><th></th></tr>
+              </thead>
+              <tbody id="fuel-table-body">
+                <tr><td colspan="8" class="empty-note">Loading&hellip;</td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </section>
@@ -461,6 +640,7 @@
     var state = {
       theme: localStorage.getItem("volvo-theme") || (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark"),
       unit: localStorage.getItem("volvo-unit") || "km",
+      token: localStorage.getItem("volvo-dashboard-token") || "",
       map: null,
       liveMarker: null,
       routeLayer: null,
@@ -585,8 +765,18 @@
       dot.className = "status-dot " + (ok ? "ok" : "bad");
     }
 
+    function authHeaders(extra) {
+      return Object.assign({ authorization: "Bearer " + state.token }, extra || {});
+    }
+
     async function api(path, options) {
+      options = options || {};
+      options.headers = authHeaders(options.headers);
       var res = await fetch(path, options);
+      if (res.status === 401) {
+        lockDashboard("Access code incorrect or expired — enter it again.");
+        throw new Error("Unauthorized");
+      }
       var payload = await res.json().catch(function () { return {}; });
       if (!res.ok || payload.error) {
         throw new Error(payload.error || ("HTTP " + res.status));
@@ -903,6 +1093,103 @@
       }
     }
 
+    // ---- Fuel ----
+
+    function fuelHeroCard(label, value) {
+      var div = document.createElement("div");
+      div.className = "hero-card";
+      div.innerHTML = '<div class="label">' + label + '</div><div class="value">' + value + '</div>';
+      return div;
+    }
+
+    async function loadFuel() {
+      var statsRow = document.getElementById("fuel-stats-row");
+      var tbody = document.getElementById("fuel-table-body");
+      try {
+        var res = await api("/api/volvo/fuel");
+        var s = res.stats;
+
+        statsRow.innerHTML = "";
+        statsRow.appendChild(fuelHeroCard("Fill-ups", s.count));
+        statsRow.appendChild(fuelHeroCard("Total spent", s.totalCost != null ? "$" + s.totalCost.toFixed(2) : "—"));
+        statsRow.appendChild(fuelHeroCard("Total gallons", s.totalGallons.toFixed(1)));
+        statsRow.appendChild(fuelHeroCard("Avg MPG", s.avgMpg != null ? s.avgMpg : "—"));
+        statsRow.appendChild(fuelHeroCard("Avg $/gal", s.avgPricePerGallon != null ? "$" + s.avgPricePerGallon.toFixed(3) : "—"));
+
+        if (!res.fillups.length) {
+          tbody.innerHTML = '<tr><td colspan="8" class="empty-note">No fill-ups logged yet.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = "";
+        res.fillups.forEach(function (f) {
+          var tr = document.createElement("tr");
+          var date = new Date(f.filledAt);
+          tr.innerHTML =
+            "<td>" + date.toLocaleDateString() + "</td>" +
+            "<td>" + fmtDistance(f.odometerKm) + "</td>" +
+            "<td>" + f.gallons.toFixed(3) + (f.isPartial ? " *" : "") + "</td>" +
+            "<td>" + (f.pricePerGallon != null ? "$" + f.pricePerGallon.toFixed(3) : "—") + "</td>" +
+            "<td>" + (f.totalCost != null ? "$" + f.totalCost.toFixed(2) : "—") + "</td>" +
+            "<td>" + (f.mpg != null ? f.mpg : "—") + "</td>" +
+            "<td>" + (f.station || "—") + "</td>" +
+            '<td><button class="del-btn" title="Delete">✕</button></td>';
+          tr.querySelector(".del-btn").addEventListener("click", function () { deleteFuel(f.id); });
+          tbody.appendChild(tr);
+        });
+      } catch (err) {
+        statsRow.innerHTML = "";
+        tbody.innerHTML = '<tr><td colspan="8" class="empty-note">Couldn\'t load fuel log: ' + err.message + '</td></tr>';
+      }
+    }
+
+    async function deleteFuel(id) {
+      try {
+        await api("/api/volvo/fuel?id=" + encodeURIComponent(id), { method: "DELETE" });
+        loadFuel();
+      } catch (err) {
+        showError("Couldn't delete fill-up: " + err.message);
+      }
+    }
+
+    document.getElementById("fuel-form").addEventListener("submit", async function (e) {
+      e.preventDefault();
+      var odometerMi = Number(document.getElementById("fuel-odometer").value);
+      var body = {
+        filledAt: document.getElementById("fuel-date").value ? new Date(document.getElementById("fuel-date").value).toISOString() : undefined,
+        odometerKm: odometerMi / 0.621371,
+        gallons: Number(document.getElementById("fuel-gallons").value),
+        pricePerGallon: document.getElementById("fuel-price").value ? Number(document.getElementById("fuel-price").value) : null,
+        totalCost: document.getElementById("fuel-cost").value ? Number(document.getElementById("fuel-cost").value) : null,
+        station: document.getElementById("fuel-station").value || null,
+        isPartial: document.getElementById("fuel-partial").checked
+      };
+      try {
+        await api("/api/volvo/fuel", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+        document.getElementById("fuel-form").reset();
+        loadFuel();
+      } catch (err) {
+        showError("Couldn't save fill-up: " + err.message);
+      }
+    });
+
+    document.getElementById("fuel-csv-btn").addEventListener("click", async function () {
+      var input = document.getElementById("fuel-csv-input");
+      var resultEl = document.getElementById("fuel-csv-result");
+      if (!input.files || !input.files[0]) {
+        resultEl.textContent = "Choose a CSV file first.";
+        return;
+      }
+      resultEl.textContent = "Importing…";
+      try {
+        var text = await input.files[0].text();
+        var res = await api("/api/volvo/fuel-import", { method: "POST", headers: { "content-type": "text/csv" }, body: text });
+        resultEl.textContent = "Imported " + res.imported + ", skipped " + res.skipped + (res.totalErrors ? " (" + res.totalErrors + " row error(s))" : "") + ".";
+        loadFuel();
+      } catch (err) {
+        resultEl.textContent = "Import failed: " + err.message;
+      }
+    });
+
     // ---- Tabs & wiring ----
 
     function switchTab(name) {
@@ -916,6 +1203,15 @@
             loadLiveLocation();
           }
         }, 0);
+      }
+      if (name === "fuel" && !state.fuelLoaded) {
+        state.fuelLoaded = true;
+        var dateInput = document.getElementById("fuel-date");
+        if (dateInput && !dateInput.value) {
+          var now = new Date(Date.now() - new Date().getTimezoneOffset() * 60000);
+          dateInput.value = now.toISOString().slice(0, 16);
+        }
+        loadFuel();
       }
     }
 
@@ -931,11 +1227,66 @@
     document.getElementById("trip-range").addEventListener("change", loadTrips);
     document.getElementById("map-live-btn").addEventListener("click", loadLiveLocation);
 
+    // ---- Access-code gate ----
+    // volvo.html itself has no secrets in it (all API calls happen server-side
+    // in Pages Functions), but without this the page would be a fully public
+    // remote-control panel for a real car. The token is checked against every
+    // /api/volvo/* call server-side by requireDashboardAuth.
+    function lockDashboard(message) {
+      state.token = "";
+      localStorage.removeItem("volvo-dashboard-token");
+      document.getElementById("auth-overlay").classList.remove("hidden");
+      document.getElementById("auth-error").textContent = message || "";
+      document.getElementById("auth-submit").disabled = false;
+      document.getElementById("auth-submit").textContent = "Unlock";
+      var input = document.getElementById("auth-input");
+      input.value = "";
+      input.focus();
+    }
+
+    function startApp() {
+      document.getElementById("auth-overlay").classList.add("hidden");
+      loadOverview();
+      loadTrips();
+      loadUpdates();
+    }
+
+    document.getElementById("auth-form").addEventListener("submit", async function (e) {
+      e.preventDefault();
+      var candidate = document.getElementById("auth-input").value;
+      if (!candidate) return;
+      var submitBtn = document.getElementById("auth-submit");
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Checking…";
+      document.getElementById("auth-error").textContent = "";
+      state.token = candidate;
+      try {
+        var res = await fetch("/api/volvo/commands", { headers: authHeaders() });
+        if (res.status === 401) {
+          state.token = "";
+          document.getElementById("auth-error").textContent = "Incorrect access code.";
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Unlock";
+          return;
+        }
+        localStorage.setItem("volvo-dashboard-token", candidate);
+        startApp();
+      } catch (err) {
+        document.getElementById("auth-error").textContent = "Couldn't reach the dashboard backend: " + err.message;
+        state.token = "";
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Unlock";
+      }
+    });
+
     applyTheme();
     applyUnit();
-    loadOverview();
-    loadTrips();
-    loadUpdates();
+    if (state.token) {
+      document.getElementById("auth-overlay").classList.add("hidden");
+      startApp();
+    } else {
+      document.getElementById("auth-input").focus();
+    }
   })();
   </script>
 </body>

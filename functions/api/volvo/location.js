@@ -1,7 +1,8 @@
-import { json, getVin, volvoFetch, locationUrl } from "../../_shared/volvo.js";
+import { json, getVin, volvoFetch, locationUrl, requireDashboardAuth } from "../../_shared/volvo.js";
 
-export async function onRequestGet({ env }) {
+export async function onRequestGet({ request, env }) {
   try {
+    requireDashboardAuth(request, env);
     const vin = getVin(env);
     const payload = await volvoFetch(env, locationUrl(vin));
     const feature = payload?.data;
@@ -18,6 +19,6 @@ export async function onRequestGet({ env }) {
       timestamp: feature.properties?.timestamp ?? null
     });
   } catch (error) {
-    return json({ error: error.message }, error.status === 404 ? 404 : 502);
+    return json({ error: error.message }, error.status || 502);
   }
 }

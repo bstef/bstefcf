@@ -21,6 +21,33 @@ export function requireEnv(env, keys) {
   }
 }
 
+function timingSafeEqual(a, b) {
+  const encoder = new TextEncoder();
+  const bufA = encoder.encode(a);
+  const bufB = encoder.encode(b);
+  if (bufA.length !== bufB.length) return false;
+  let diff = 0;
+  for (let i = 0; i < bufA.length; i++) diff |= bufA[i] ^ bufB[i];
+  return diff === 0;
+}
+
+// Every user-facing /api/volvo/* route (everything except poll.js, which has
+// its own POLL_SECRET for the unattended cron caller) requires this shared
+// secret, so an unauthenticated visitor to the public Pages deployment can't
+// read vehicle/location data or send remote commands. This is a minimum-bar
+// app-level gate, not a substitute for putting Cloudflare Access in front of
+// /volvo.html and /api/volvo/* for real caller authentication — see README.
+export function requireDashboardAuth(request, env) {
+  requireEnv(env, ["DASHBOARD_TOKEN"]);
+  const auth = request.headers.get("authorization") || "";
+  const expected = `Bearer ${env.DASHBOARD_TOKEN}`;
+  if (!timingSafeEqual(auth, expected)) {
+    const error = new Error("Unauthorized");
+    error.status = 401;
+    throw error;
+  }
+}
+
 async function requestToken(env, params) {
   const basic = btoa(`${env.VOLVO_CLIENT_ID}:${env.VOLVO_CLIENT_SECRET}`);
   const response = await fetch(TOKEN_URL, {
@@ -62,11 +89,19 @@ async function saveToken(env, { access_token, refresh_token, expires_in }) {
   return { access_token, refresh_token, expires_at: expiresAt };
 }
 
-// Returns a valid access token, refreshing (and persisting the rotated
-// refresh token) whenever the cached one is missing or about to expire.
-// The very first call falls back to the long-lived VOLVO_REFRESH_TOKEN
-// secret to bootstrap D1 before any row exists.
-export async function getAccessToken(env) {
+// Module-level single-flight guard. Volvo rotates the refresh token on every
+// use, so if the many resource fetches vehicle.js fires in parallel each
+// independently noticed the cached token was stale and refreshed on their
+// own, only the first exchange would succeed — the rest would submit an
+// already-consumed refresh_token and get invalid_grant back. Routing every
+// call through this one in-flight promise makes them share a single
+// exchange instead. The check-and-set below is synchronous (no `await`
+// before it), so it's race-free even when many calls are kicked off in the
+// same tick via Promise.all — whichever runs first claims the slot before
+// any other call gets a chance to check it.
+let tokenPromise = null;
+
+async function fetchOrRefreshToken(env) {
   requireEnv(env, ["VOLVO_CLIENT_ID", "VOLVO_CLIENT_SECRET", "VOLVO_API_KEY"]);
   if (!env.VOLVO_DB) {
     throw new Error("Missing VOLVO_DB — bind a D1 database named VOLVO_DB to this Pages project.");
@@ -89,6 +124,23 @@ export async function getAccessToken(env) {
   const payload = await requestToken(env, { grant_type: "refresh_token", refresh_token: refreshToken });
   const saved = await saveToken(env, payload);
   return saved.access_token;
+}
+
+// Returns a valid access token, refreshing (and persisting the rotated
+// refresh token) whenever the cached one is missing or about to expire.
+// The very first call falls back to the long-lived VOLVO_REFRESH_TOKEN
+// secret to bootstrap D1 before any row exists. Concurrent callers within
+// the same Worker invocation share one exchange — see the single-flight
+// note above. This only guards one isolate; two truly simultaneous
+// requests landing on different isolates can still both refresh, but
+// that's rare and self-healing (the loser's next call just re-reads D1).
+export function getAccessToken(env) {
+  if (!tokenPromise) {
+    tokenPromise = fetchOrRefreshToken(env).finally(() => {
+      tokenPromise = null;
+    });
+  }
+  return tokenPromise;
 }
 
 export async function volvoFetch(env, url, options = {}) {

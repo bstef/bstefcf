@@ -1,4 +1,4 @@
-import { json, getVin, vehicleUrl, energyUrl, tryFetch } from "../../_shared/volvo.js";
+import { json, getVin, vehicleUrl, energyUrl, tryFetch, requireDashboardAuth } from "../../_shared/volvo.js";
 
 // Aggregates every Connected Vehicle / Energy resource into one response.
 // Not every resource applies to every vehicle (e.g. `fuel` on a pure EV, or
@@ -19,8 +19,9 @@ const RESOURCES = [
   ["energy", (vin) => energyUrl(vin, "/state")]
 ];
 
-export async function onRequestGet({ env }) {
+export async function onRequestGet({ request, env }) {
   try {
+    requireDashboardAuth(request, env);
     const vin = getVin(env);
     const entries = await Promise.all(
       RESOURCES.map(async ([key, urlFn]) => [key, await tryFetch(env, urlFn(vin))])
@@ -39,6 +40,6 @@ export async function onRequestGet({ env }) {
 
     return json(result);
   } catch (error) {
-    return json({ error: error.message }, 502);
+    return json({ error: error.message }, error.status || 502);
   }
 }

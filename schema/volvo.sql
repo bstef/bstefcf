@@ -38,3 +38,23 @@ CREATE TABLE IF NOT EXISTS trips (
 );
 CREATE INDEX IF NOT EXISTS idx_trips_vin_time ON trips (vin, start_time);
 CREATE INDEX IF NOT EXISTS idx_trips_status ON trips (vin, status);
+
+CREATE TABLE IF NOT EXISTS fuel_ups (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  vin TEXT NOT NULL,
+  filled_at INTEGER NOT NULL,
+  odometer_km REAL NOT NULL,
+  gallons REAL NOT NULL,
+  price_per_gallon REAL,
+  total_cost REAL,
+  is_partial INTEGER NOT NULL DEFAULT 0,
+  station TEXT,
+  notes TEXT,
+  source TEXT NOT NULL DEFAULT 'manual',
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_fuel_ups_vin_odo ON fuel_ups (vin, odometer_km);
+-- Guards against double-importing the same CSV row twice; also means a
+-- second manual entry with the same timestamp+odometer down to the second
+-- silently no-ops rather than erroring, which is an acceptable trade-off.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_fuel_ups_dedup ON fuel_ups (vin, filled_at, odometer_km);

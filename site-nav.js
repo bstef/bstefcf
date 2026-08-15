@@ -5,7 +5,7 @@
     { path: "/whois.html", icon: "🔍", name: "Whois Lookup", desc: "Domain & IP information" },
     { path: "/fork-sync.html", icon: "🍴", name: "Fork Sync Report", desc: "GitHub fork sync status" },
     { path: "/cloudflare.html", icon: "☁️", name: "Cloudflare Dashboard", desc: "Traffic, cache & error metrics" },
-    { path: "/volvo.html", icon: "🚗", name: "Volvo Dashboard", desc: "Car controls, trip log & map, updates" }
+    { path: "/volvo.html", icon: "🚗", name: "Volvo Dashboard", desc: "Controls, trips & map, fuel log, updates" }
   ];
 
   function currentPath() {

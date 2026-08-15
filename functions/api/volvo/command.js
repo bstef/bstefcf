@@ -1,4 +1,4 @@
-import { json, getVin, volvoFetch, vehicleUrl } from "../../_shared/volvo.js";
+import { json, getVin, volvoFetch, vehicleUrl, requireDashboardAuth } from "../../_shared/volvo.js";
 
 // Allowlist of commands this dashboard is willing to send, independent of
 // whatever the vehicle-reported /commands list contains, so a malformed or
@@ -17,6 +17,12 @@ const ALLOWED_COMMANDS = new Set([
 ]);
 
 export async function onRequestPost({ request, env }) {
+  try {
+    requireDashboardAuth(request, env);
+  } catch (error) {
+    return json({ error: error.message }, error.status || 401);
+  }
+
   let body;
   try {
     body = await request.json();

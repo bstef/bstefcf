@@ -1,4 +1,4 @@
-import { json, getVin } from "../../_shared/volvo.js";
+import { json, getVin, requireDashboardAuth } from "../../_shared/volvo.js";
 
 function toTrip(row, includePath) {
   const trip = {
@@ -21,6 +21,7 @@ function toTrip(row, includePath) {
 
 export async function onRequestGet({ request, env }) {
   try {
+    requireDashboardAuth(request, env);
     const vin = getVin(env);
     const url = new URL(request.url);
     const id = url.searchParams.get("id");
@@ -44,6 +45,6 @@ export async function onRequestGet({ request, env }) {
 
     return json({ trips, totalDistanceKm, count: trips.length });
   } catch (error) {
-    return json({ error: error.message }, 502);
+    return json({ error: error.message }, error.status || 502);
   }
 }
