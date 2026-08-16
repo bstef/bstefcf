@@ -830,7 +830,7 @@
 
     var state = {
       theme: localStorage.getItem("volvo-theme") || (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark"),
-      unit: localStorage.getItem("volvo-unit") || "km",
+      unit: localStorage.getItem("volvo-unit") || "mi",
       token: localStorage.getItem("volvo-dashboard-token") || "",
       map: null,
       liveMarker: null,
@@ -903,6 +903,17 @@
       return { value: field };
     }
 
+    // Volvo's API reports distances in km regardless of the dashboard's
+    // mi/km toggle — this is what makes fields like "distance to service"
+    // in Diagnostics & statistics follow that toggle instead of always
+    // showing km.
+    function convertDisplayUnit(value, unit) {
+      if (state.unit === "mi" && typeof value === "number" && unit && /^km$/i.test(unit)) {
+        return { value: (value * 0.621371).toFixed(1), unit: "mi" };
+      }
+      return { value: value, unit: unit };
+    }
+
     // Matches fields like { exteriorImageUrl: "https://...", interiorImageUrl: "https://..." }
     // that the vehicle-details endpoint returns — worth rendering as actual
     // pictures instead of falling through to a JSON.stringify() dump.
@@ -940,6 +951,47 @@
       container.appendChild(wrap);
     }
 
+    // Catches other flat descriptive objects the API returns (e.g. a
+    // vehicle "descriptions" field: {model, upholstery, steering}) that
+    // aren't a {value, unit, timestamp}-wrapped field and aren't an image
+    // map — same JSON.stringify-fallback problem as images had, generalized.
+    function looksLikeNestedObject(value) {
+      if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+      if ("value" in value) return false;
+      var keys = Object.keys(value);
+      if (!keys.length) return false;
+      return keys.every(function (k) {
+        var v = value[k];
+        return v === null || typeof v === "string" || typeof v === "number" || typeof v === "boolean";
+      });
+    }
+
+    function renderNestedBlock(container, key, nested) {
+      var wrap = document.createElement("div");
+      wrap.className = "kv-images-row";
+      var label = document.createElement("div");
+      label.className = "kv-images-label";
+      label.textContent = humanizeKey(key);
+      wrap.appendChild(label);
+      Object.keys(nested).forEach(function (subKey) {
+        var row = document.createElement("div");
+        row.className = "kv-row";
+        var kSpan = document.createElement("span");
+        kSpan.className = "k";
+        kSpan.textContent = humanizeKey(subKey);
+        var vSpan = document.createElement("span");
+        vSpan.className = "v";
+        var badge = document.createElement("span");
+        badge.className = "badge " + badgeClass(nested[subKey]);
+        badge.textContent = humanizeValue(nested[subKey]);
+        vSpan.appendChild(badge);
+        row.appendChild(kSpan);
+        row.appendChild(vSpan);
+        wrap.appendChild(row);
+      });
+      container.appendChild(wrap);
+    }
+
     function renderKvCard(container, obj, opts) {
       opts = opts || {};
       container.innerHTML = "";
@@ -957,10 +1009,15 @@
           renderImageBlock(container, key, obj[key]);
           return;
         }
+        if (looksLikeNestedObject(obj[key])) {
+          renderNestedBlock(container, key, obj[key]);
+          return;
+        }
         var unwrapped = unwrapField(obj[key]);
+        var converted = convertDisplayUnit(unwrapped.value, unwrapped.unit);
         var row = document.createElement("div");
         row.className = "kv-row";
-        var display = humanizeValue(unwrapped.value) + (unwrapped.unit ? " " + unwrapped.unit : "");
+        var display = humanizeValue(converted.value) + (converted.unit ? " " + converted.unit : "");
         var cls = badgeClass(unwrapped.value);
         var kSpan = document.createElement("span");
         kSpan.className = "k";
