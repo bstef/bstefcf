@@ -12,7 +12,7 @@ const HEADER_ALIASES = {
   date: ["date", "filldate", "filldatetime", "filleddate", "fillupdate"],
   odometer: ["odometer", "odometermi", "odometerkm", "mileage", "miles", "odo"],
   gallons: ["gallons", "gallonus", "volume", "fuelamount", "fuelvolume", "liters", "litres", "fuelvolumel"],
-  pricePerGallon: ["priceper", "pricepergallon", "pricepergal", "priceperliter", "priceperlitre", "unitprice", "pricegal", "costpergallon"],
+  pricePerGallon: ["price", "priceper", "pricepergallon", "pricepergal", "priceperliter", "priceperlitre", "unitprice", "pricegal", "costpergallon", "ppg"],
   totalCost: ["totalcost", "cost", "totalprice", "amount", "total"],
   partial: ["partial", "partialfill"],
   full: ["fulltank", "full"],
@@ -31,11 +31,14 @@ function matchColumns(headers) {
     for (const [field, aliases] of Object.entries(HEADER_ALIASES)) {
       if (map[field] == null && aliases.includes(norm)) map[field] = index;
     }
-    // Fall back to substring matches for headers with extra words/units,
-    // e.g. "Odometer (mi)" or "Price/gallon ($)".
-    if (Object.values(map).indexOf(index) === -1) {
+    // Fall back to substring matches for headers with extra words/units in
+    // either direction — a header can be more specific than the alias
+    // ("Odometer (mi)" contains "odometer") or less specific than it
+    // ("Price" is contained in the guessed "pricepergallon"). The length
+    // guard keeps very short strings from matching everything.
+    if (Object.values(map).indexOf(index) === -1 && norm.length >= 3) {
       for (const [field, aliases] of Object.entries(HEADER_ALIASES)) {
-        if (map[field] == null && aliases.some((a) => norm.indexOf(a) !== -1)) {
+        if (map[field] == null && aliases.some((a) => a.length >= 3 && (norm.indexOf(a) !== -1 || a.indexOf(norm) !== -1))) {
           map[field] = index;
           break;
         }
@@ -136,8 +139,12 @@ export async function onRequestPost({ request, env }) {
         if (cols.partial != null) isPartial = parseBool(cells[cols.partial]);
         else if (cols.full != null) isPartial = !parseBool(cells[cols.full]);
 
+        // REPLACE (not IGNORE) so re-uploading the same export after a
+        // parsing fix corrects previously-imported rows in place, matched
+        // on the (vin, filled_at, odometer_km) unique index, instead of
+        // silently skipping them as already-imported.
         const result = await env.VOLVO_DB.prepare(
-          `INSERT OR IGNORE INTO fuel_ups
+          `INSERT OR REPLACE INTO fuel_ups
              (vin, filled_at, odometer_km, gallons, price_per_gallon, total_cost, is_partial, station, notes, source, created_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'csv-import', ?)`
         )
