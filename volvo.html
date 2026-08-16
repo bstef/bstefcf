@@ -25,8 +25,15 @@
     --bad-bg: rgba(248,113,113,0.12);
     --warn: #facc15;
     --warn-bg: rgba(250,204,21,0.12);
-    --accent-bg: rgba(94,234,212,0.08);
-    --accent-border: rgba(94,234,212,0.35);
+    /* Per-card accent palette — cycled across the hero stat cards on the
+       Overview and Fuel tabs so each one reads as its own color, and used
+       individually elsewhere (e.g. Controls) to stand apart from them. */
+    --c1-bg: rgba(94,234,212,0.10); --c1-border: rgba(94,234,212,0.4);
+    --c2-bg: rgba(96,165,250,0.10); --c2-border: rgba(96,165,250,0.4);
+    --c3-bg: rgba(192,132,252,0.10); --c3-border: rgba(192,132,252,0.4);
+    --c4-bg: rgba(251,191,36,0.10); --c4-border: rgba(251,191,36,0.4);
+    --c5-bg: rgba(251,113,133,0.10); --c5-border: rgba(251,113,133,0.4);
+    --c6-bg: rgba(74,222,128,0.10); --c6-border: rgba(74,222,128,0.4);
     --shadow: 0 18px 50px rgba(0,0,0,0.35);
     --font: Inter, "SF Pro Display", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     --mono: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Consolas, monospace;
@@ -47,8 +54,12 @@
     --bad-bg: rgba(220,38,38,0.1);
     --warn: #b45309;
     --warn-bg: rgba(180,83,9,0.12);
-    --accent-bg: rgba(15,148,136,0.07);
-    --accent-border: rgba(15,148,136,0.3);
+    --c1-bg: rgba(15,148,136,0.09); --c1-border: rgba(15,148,136,0.35);
+    --c2-bg: rgba(37,99,235,0.08); --c2-border: rgba(37,99,235,0.35);
+    --c3-bg: rgba(124,58,237,0.08); --c3-border: rgba(124,58,237,0.35);
+    --c4-bg: rgba(180,83,9,0.09); --c4-border: rgba(180,83,9,0.35);
+    --c5-bg: rgba(190,18,60,0.08); --c5-border: rgba(190,18,60,0.35);
+    --c6-bg: rgba(22,163,74,0.08); --c6-border: rgba(22,163,74,0.35);
     --shadow: 0 12px 34px rgba(15,23,42,0.1);
   }
 
@@ -162,12 +173,18 @@
     margin-bottom: 16px;
   }
   .hero-card {
-    background: var(--accent-bg);
-    border: 1px solid var(--accent-border);
     border-radius: 12px;
     padding: 16px 18px;
     box-shadow: var(--shadow);
+    border: 1px solid var(--line);
+    background: var(--panel);
   }
+  .hero-card:nth-child(6n+1) { background: var(--c1-bg); border-color: var(--c1-border); }
+  .hero-card:nth-child(6n+2) { background: var(--c2-bg); border-color: var(--c2-border); }
+  .hero-card:nth-child(6n+3) { background: var(--c3-bg); border-color: var(--c3-border); }
+  .hero-card:nth-child(6n+4) { background: var(--c4-bg); border-color: var(--c4-border); }
+  .hero-card:nth-child(6n+5) { background: var(--c5-bg); border-color: var(--c5-border); }
+  .hero-card:nth-child(6n+6) { background: var(--c6-bg); border-color: var(--c6-border); }
   .hero-card .label {
     font-size: 11px;
     text-transform: uppercase;
@@ -210,8 +227,8 @@
     box-shadow: var(--shadow);
   }
   .card.card-accent {
-    background: var(--accent-bg);
-    border-color: var(--accent-border);
+    background: var(--c2-bg);
+    border-color: var(--c2-border);
   }
   .card h2 {
     margin: 0 0 12px;
@@ -222,6 +239,7 @@
   }
   .card.span-2 { grid-column: span 2; }
   @media (max-width: 720px) { .card.span-2 { grid-column: span 1; } }
+  .card.span-full { grid-column: 1 / -1; }
 
   /* Full-width sub-row so paired cards (e.g. Engine + Warnings) stretch to
      match each other's height, not whatever taller card happens to land in
@@ -548,8 +566,8 @@
 
     <nav class="tabs">
       <button class="tab-btn active" data-tab="overview">Overview &amp; Controls</button>
-      <button class="tab-btn" data-tab="trips">Trips &amp; Map</button>
       <button class="tab-btn" data-tab="fuel">Fuel</button>
+      <button class="tab-btn" data-tab="trips">Trips &amp; Map</button>
       <button class="tab-btn" data-tab="updates">Updates</button>
     </nav>
 
@@ -906,25 +924,25 @@
         renderKvCard(windowsCard.body, vehicle.windows);
         grid.appendChild(windowsCard.el);
 
+        // Wrapped in their own full-width sub-row so these three (all
+        // usually short) stretch to match each other's height and split
+        // the row evenly, instead of whatever taller card the outer grid's
+        // auto-fit happens to place alongside them.
+        var statusRow = document.createElement("div");
+        statusRow.className = "card-row";
         var tyresCard = card("Tyres");
         renderKvCard(tyresCard.body, vehicle.tyres);
-        grid.appendChild(tyresCard.el);
-
-        // Wrapped in their own full-width sub-row so these two (both
-        // usually short) stretch to match each other's height instead of
-        // whatever taller card the outer grid's auto-fit happens to place
-        // alongside them.
-        var engineWarningsRow = document.createElement("div");
-        engineWarningsRow.className = "card-row";
+        statusRow.appendChild(tyresCard.el);
         var engineCard = card("Engine");
         renderKvCard(engineCard.body, vehicle.engineStatus);
-        engineWarningsRow.appendChild(engineCard.el);
+        statusRow.appendChild(engineCard.el);
         var warningsCard = card("Warnings");
         renderWarnings(warningsCard.body, vehicle.warnings);
-        engineWarningsRow.appendChild(warningsCard.el);
-        grid.appendChild(engineWarningsRow);
+        statusRow.appendChild(warningsCard.el);
+        grid.appendChild(statusRow);
 
-        var diagCard = card("Diagnostics & statistics", true);
+        var diagCard = card("Diagnostics & statistics");
+        diagCard.el.classList.add("span-full");
         var merged = Object.assign({}, vehicle.diagnostics, vehicle.statistics, vehicle.brakes);
         renderKvCard(diagCard.body, merged);
         grid.appendChild(diagCard.el);
