@@ -795,6 +795,39 @@
       "engine-stop": { label: "Stop engine", emoji: "⏹️" }
     };
 
+    // Keyword fallback for when the vehicle reports a command name that
+    // doesn't exactly match COMMAND_META's guessed strings (kebab-case,
+    // "lock" vs "LOCK", etc.) — without this, every unmatched command was
+    // falling through to the same generic ⚙️ icon. Order matters: check
+    // "unlock" before the more general "lock" since it contains it.
+    var COMMAND_KEYWORDS = [
+      [/unlock/, { emoji: "🔓", sensitive: true }],
+      [/reduced.?guard/, { emoji: "🔐" }],
+      [/lock/, { emoji: "🔒" }],
+      [/climat.*stop|stop.*climat/, { emoji: "🛑" }],
+      [/climat|precondition/, { emoji: "❄️" }],
+      [/honk.*flash|flash.*honk/, { emoji: "🚨" }],
+      [/honk|horn/, { emoji: "📢" }],
+      [/flash|light/, { emoji: "💡" }],
+      [/engine.*stop|stop.*engine/, { emoji: "⏹️" }],
+      [/engine.*start|start.*engine/, { emoji: "🔑", sensitive: true }],
+      [/engine/, { emoji: "🔧" }],
+      [/charg/, { emoji: "🔌" }],
+      [/window|sunroof|roof/, { emoji: "🪟" }],
+      [/trunk|tailgate|liftgate/, { emoji: "🧳" }],
+      [/heat|warm/, { emoji: "🔥" }]
+    ];
+
+    function guessCommandMeta(cmd) {
+      var norm = String(cmd || "").toLowerCase();
+      for (var i = 0; i < COMMAND_KEYWORDS.length; i++) {
+        if (COMMAND_KEYWORDS[i][0].test(norm)) {
+          return Object.assign({ label: humanizeKey(cmd) }, COMMAND_KEYWORDS[i][1]);
+        }
+      }
+      return { label: humanizeKey(cmd), emoji: "⚙️" };
+    }
+
     var state = {
       theme: localStorage.getItem("volvo-theme") || (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark"),
       unit: localStorage.getItem("volvo-unit") || "km",
@@ -1135,10 +1168,17 @@
           return;
         }
         commands.forEach(function (cmd) {
-          var meta = COMMAND_META[cmd] || { label: humanizeKey(cmd), emoji: "⚙️" };
+          var meta = COMMAND_META[cmd] || guessCommandMeta(cmd);
           var btn = document.createElement("button");
           btn.className = "cmd-btn" + (meta.sensitive ? " sensitive" : "");
-          btn.innerHTML = '<span class="emoji">' + meta.emoji + '</span><span>' + meta.label + "</span>";
+          btn.title = cmd;
+          var emojiSpan = document.createElement("span");
+          emojiSpan.className = "emoji";
+          emojiSpan.textContent = meta.emoji;
+          var labelSpan = document.createElement("span");
+          labelSpan.textContent = meta.label;
+          btn.appendChild(emojiSpan);
+          btn.appendChild(labelSpan);
           btn.addEventListener("click", function () { handleCommandClick(btn, cmd, meta); });
           wrap.appendChild(btn);
         });
