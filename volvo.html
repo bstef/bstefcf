@@ -156,6 +156,9 @@
 
   .banner {
     display: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
     padding: 12px 14px;
     border-radius: 8px;
     background: var(--bad-bg);
@@ -164,7 +167,19 @@
     font-size: 13px;
     margin-bottom: 16px;
   }
-  .banner.show { display: block; }
+  .banner.show { display: flex; }
+  .banner-close {
+    font: inherit;
+    cursor: pointer;
+    background: none;
+    border: none;
+    color: var(--bad);
+    font-size: 15px;
+    line-height: 1;
+    padding: 2px 4px;
+    flex-shrink: 0;
+  }
+  .banner-close:hover { opacity: 0.7; }
 
   .hero {
     display: grid;
@@ -287,6 +302,41 @@
 
   .empty-note { color: var(--muted); font-size: 13px; padding: 6px 0; }
 
+  .kv-images-row { padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .kv-images-row:last-child { border-bottom: none; }
+  .kv-images-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .kv-images {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .kv-images figure {
+    margin: 0;
+    flex: 1 1 180px;
+    max-width: 260px;
+  }
+  .kv-images img {
+    display: block;
+    width: 100%;
+    height: 130px;
+    object-fit: cover;
+    border-radius: 8px;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+  }
+  .kv-images figcaption {
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--muted);
+    text-align: center;
+  }
+
   .controls-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
@@ -383,7 +433,32 @@
     font-size: 13px;
   }
 
-  .changelog li { margin-bottom: 6px; font-size: 13px; color: var(--muted); }
+  .changelog { margin-top: 10px; }
+  .changelog-entry {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin-bottom: 8px;
+  }
+  .changelog-entry:last-child { margin-bottom: 0; }
+  .changelog-entry summary {
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    list-style: none;
+  }
+  .changelog-entry summary::-webkit-details-marker { display: none; }
+  .changelog-entry summary::before {
+    content: "▸";
+    display: inline-block;
+    margin-right: 6px;
+    color: var(--accent);
+    transition: transform 0.15s ease;
+  }
+  .changelog-entry[open] summary::before { transform: rotate(90deg); }
+  .changelog-entry ul { margin: 8px 0 2px; padding-left: 20px; }
+  .changelog-entry li { margin-bottom: 6px; font-size: 13px; color: var(--muted); }
   .new-badge {
     display: inline-block;
     margin-left: 8px;
@@ -720,6 +795,39 @@
       "engine-stop": { label: "Stop engine", emoji: "⏹️" }
     };
 
+    // Keyword fallback for when the vehicle reports a command name that
+    // doesn't exactly match COMMAND_META's guessed strings (kebab-case,
+    // "lock" vs "LOCK", etc.) — without this, every unmatched command was
+    // falling through to the same generic ⚙️ icon. Order matters: check
+    // "unlock" before the more general "lock" since it contains it.
+    var COMMAND_KEYWORDS = [
+      [/unlock/, { emoji: "🔓", sensitive: true }],
+      [/reduced.?guard/, { emoji: "🔐" }],
+      [/lock/, { emoji: "🔒" }],
+      [/climat.*stop|stop.*climat/, { emoji: "🛑" }],
+      [/climat|precondition/, { emoji: "❄️" }],
+      [/honk.*flash|flash.*honk/, { emoji: "🚨" }],
+      [/honk|horn/, { emoji: "📢" }],
+      [/flash|light/, { emoji: "💡" }],
+      [/engine.*stop|stop.*engine/, { emoji: "⏹️" }],
+      [/engine.*start|start.*engine/, { emoji: "🔑", sensitive: true }],
+      [/engine/, { emoji: "🔧" }],
+      [/charg/, { emoji: "🔌" }],
+      [/window|sunroof|roof/, { emoji: "🪟" }],
+      [/trunk|tailgate|liftgate/, { emoji: "🧳" }],
+      [/heat|warm/, { emoji: "🔥" }]
+    ];
+
+    function guessCommandMeta(cmd) {
+      var norm = String(cmd || "").toLowerCase();
+      for (var i = 0; i < COMMAND_KEYWORDS.length; i++) {
+        if (COMMAND_KEYWORDS[i][0].test(norm)) {
+          return Object.assign({ label: humanizeKey(cmd) }, COMMAND_KEYWORDS[i][1]);
+        }
+      }
+      return { label: humanizeKey(cmd), emoji: "⚙️" };
+    }
+
     var state = {
       theme: localStorage.getItem("volvo-theme") || (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark"),
       unit: localStorage.getItem("volvo-unit") || "km",
@@ -795,6 +903,43 @@
       return { value: field };
     }
 
+    // Matches fields like { exteriorImageUrl: "https://...", interiorImageUrl: "https://..." }
+    // that the vehicle-details endpoint returns — worth rendering as actual
+    // pictures instead of falling through to a JSON.stringify() dump.
+    function looksLikeImageMap(value) {
+      if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+      var entries = Object.keys(value);
+      if (!entries.length) return false;
+      return entries.every(function (k) {
+        return /image/i.test(k) && typeof value[k] === "string" && /^https?:\/\//i.test(value[k]);
+      });
+    }
+
+    function renderImageBlock(container, key, imgMap) {
+      var wrap = document.createElement("div");
+      wrap.className = "kv-images-row";
+      var label = document.createElement("div");
+      label.className = "kv-images-label";
+      label.textContent = humanizeKey(key);
+      wrap.appendChild(label);
+      var gallery = document.createElement("div");
+      gallery.className = "kv-images";
+      Object.keys(imgMap).forEach(function (imgKey) {
+        var figure = document.createElement("figure");
+        var img = document.createElement("img");
+        img.src = imgMap[imgKey];
+        img.alt = humanizeKey(imgKey);
+        img.loading = "lazy";
+        var caption = document.createElement("figcaption");
+        caption.textContent = humanizeKey(imgKey).replace(/ Image Url$/i, "");
+        figure.appendChild(img);
+        figure.appendChild(caption);
+        gallery.appendChild(figure);
+      });
+      wrap.appendChild(gallery);
+      container.appendChild(wrap);
+    }
+
     function renderKvCard(container, obj, opts) {
       opts = opts || {};
       container.innerHTML = "";
@@ -808,14 +953,26 @@
         return;
       }
       keys.forEach(function (key) {
+        if (looksLikeImageMap(obj[key])) {
+          renderImageBlock(container, key, obj[key]);
+          return;
+        }
         var unwrapped = unwrapField(obj[key]);
         var row = document.createElement("div");
         row.className = "kv-row";
         var display = humanizeValue(unwrapped.value) + (unwrapped.unit ? " " + unwrapped.unit : "");
         var cls = badgeClass(unwrapped.value);
-        row.innerHTML =
-          '<span class="k">' + humanizeKey(key) + '</span>' +
-          '<span class="v"><span class="badge ' + cls + '">' + display + "</span></span>";
+        var kSpan = document.createElement("span");
+        kSpan.className = "k";
+        kSpan.textContent = humanizeKey(key);
+        var vSpan = document.createElement("span");
+        vSpan.className = "v";
+        var badge = document.createElement("span");
+        badge.className = "badge " + cls;
+        badge.textContent = display;
+        vSpan.appendChild(badge);
+        row.appendChild(kSpan);
+        row.appendChild(vSpan);
         container.appendChild(row);
       });
     }
@@ -838,8 +995,18 @@
 
     function showError(msg) {
       var el = document.getElementById("error-banner");
+      el.innerHTML = "";
       if (!msg) { el.classList.remove("show"); return; }
-      el.textContent = msg;
+      var text = document.createElement("span");
+      text.textContent = msg;
+      var closeBtn = document.createElement("button");
+      closeBtn.type = "button";
+      closeBtn.className = "banner-close";
+      closeBtn.setAttribute("aria-label", "Dismiss");
+      closeBtn.textContent = "✕";
+      closeBtn.addEventListener("click", function () { showError(null); });
+      el.appendChild(text);
+      el.appendChild(closeBtn);
       el.classList.add("show");
     }
 
@@ -1001,10 +1168,17 @@
           return;
         }
         commands.forEach(function (cmd) {
-          var meta = COMMAND_META[cmd] || { label: humanizeKey(cmd), emoji: "⚙️" };
+          var meta = COMMAND_META[cmd] || guessCommandMeta(cmd);
           var btn = document.createElement("button");
           btn.className = "cmd-btn" + (meta.sensitive ? " sensitive" : "");
-          btn.innerHTML = '<span class="emoji">' + meta.emoji + '</span><span>' + meta.label + "</span>";
+          btn.title = cmd;
+          var emojiSpan = document.createElement("span");
+          emojiSpan.className = "emoji";
+          emojiSpan.textContent = meta.emoji;
+          var labelSpan = document.createElement("span");
+          labelSpan.textContent = meta.label;
+          btn.appendChild(emojiSpan);
+          btn.appendChild(labelSpan);
           btn.addEventListener("click", function () { handleCommandClick(btn, cmd, meta); });
           wrap.appendChild(btn);
         });
@@ -1169,15 +1343,38 @@
         document.getElementById("app-new-badge").innerHTML = isNew ? '<span class="new-badge">Updated</span>' : "";
         localStorage.setItem("volvo-app-version-seen", app.version);
 
-        var html = '<div class="kv-row"><span class="k">Version</span><span class="v">' + app.version + '</span></div>';
-        html += '<ul class="changelog">';
-        (app.changelog || []).forEach(function (entry) {
-          html += '<li><strong>' + entry.version + '</strong> — ' + entry.date + '<ul>';
-          (entry.notes || []).forEach(function (note) { html += "<li>" + note + "</li>"; });
-          html += "</ul></li>";
+        appEl.innerHTML = "";
+        var versionRow = document.createElement("div");
+        versionRow.className = "kv-row";
+        var versionLabel = document.createElement("span");
+        versionLabel.className = "k";
+        versionLabel.textContent = "Version";
+        var versionValue = document.createElement("span");
+        versionValue.className = "v";
+        versionValue.textContent = app.version;
+        versionRow.appendChild(versionLabel);
+        versionRow.appendChild(versionValue);
+        appEl.appendChild(versionRow);
+
+        var list = document.createElement("div");
+        list.className = "changelog";
+        (app.changelog || []).forEach(function (entry, index) {
+          var details = document.createElement("details");
+          details.className = "changelog-entry";
+          if (index === 0) details.open = true;
+          var summary = document.createElement("summary");
+          summary.textContent = entry.version + " — " + entry.date;
+          details.appendChild(summary);
+          var notes = document.createElement("ul");
+          (entry.notes || []).forEach(function (note) {
+            var li = document.createElement("li");
+            li.textContent = note;
+            notes.appendChild(li);
+          });
+          details.appendChild(notes);
+          list.appendChild(details);
         });
-        html += "</ul>";
-        appEl.innerHTML = html;
+        appEl.appendChild(list);
       } catch (err) {
         document.getElementById("car-software-kv").innerHTML = '<p class="empty-note">' + err.message + '</p>';
       }
