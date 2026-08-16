@@ -251,16 +251,26 @@
     gap: 12px;
   }
 
-  /* Fill-up history + Import, side by side and weighted so the table gets
-     the bulk of the width — same "always adjacent regardless of viewport"
-     idea as .card-row, just an uneven split instead of equal columns. */
+  /* Fuel tab: a fixed-ish form column on the left, everything else sharing
+     the remaining width on the right — all one row, so the form doesn't
+     end up alone with a huge empty gap beside it the way it did inside
+     the general-purpose auto-fit .grid-cols. */
+  .fuel-layout {
+    display: grid;
+    grid-template-columns: minmax(280px, 360px) 1fr;
+    gap: 12px;
+    align-items: start;
+  }
+  @media (max-width: 900px) { .fuel-layout { grid-template-columns: 1fr; } }
+
+  /* Fill-up history + Import, side by side within that right-hand area,
+     weighted so the table gets the bulk of the width. */
   .fuel-main-row {
-    grid-column: 1 / -1;
     display: grid;
     grid-template-columns: 2fr 1fr;
     gap: 12px;
   }
-  @media (max-width: 820px) { .fuel-main-row { grid-template-columns: 1fr; } }
+  @media (max-width: 640px) { .fuel-main-row { grid-template-columns: 1fr; } }
 
   .kv-row {
     display: flex;
@@ -625,7 +635,7 @@
         <div class="skeleton">Loading fuel stats&hellip;</div>
       </div>
 
-      <div class="grid-cols">
+      <div class="fuel-layout">
         <div class="card">
           <h2>Log a fill-up</h2>
           <form id="fuel-form" class="fuel-form">
