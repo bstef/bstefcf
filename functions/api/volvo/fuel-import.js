@@ -87,6 +87,35 @@ function parseBool(v) {
   return s === "1" || s === "true" || s === "yes" || s === "y";
 }
 
+// For large-magnitude fields (odometer), where a comma is virtually always
+// a thousands separator (e.g. "123,456") — strips it along with currency
+// symbols and stray whitespace/units before parsing.
+function parseNumber(raw) {
+  if (raw == null) return NaN;
+  const cleaned = String(raw).replace(/[^0-9.\-]/g, "");
+  return cleaned === "" ? NaN : Number(cleaned);
+}
+
+// For small-magnitude fields (gallons, price/gallon, total cost) — these
+// never legitimately reach the thousands, so a single comma is far more
+// likely a European decimal separator ("3,499") than a thousands one.
+// Blindly stripping it the way parseNumber does would silently turn that
+// into 3499, a 1000x corruption. Multiple commas, or a comma alongside a
+// dot, are still treated as thousands grouping.
+function parseDecimal(raw) {
+  if (raw == null) return NaN;
+  let s = String(raw).trim().replace(/[^0-9.,\-]/g, "");
+  if (s === "") return NaN;
+  const hasComma = s.indexOf(",") !== -1;
+  const hasDot = s.indexOf(".") !== -1;
+  if (hasComma && hasDot) {
+    s = s.lastIndexOf(",") > s.lastIndexOf(".") ? s.replace(/\./g, "").replace(",", ".") : s.replace(/,/g, "");
+  } else if (hasComma) {
+    s = (s.match(/,/g) || []).length === 1 ? s.replace(",", ".") : s.replace(/,/g, "");
+  }
+  return s === "" || s === "-" ? NaN : Number(s);
+}
+
 export async function onRequestPost({ request, env }) {
   try {
     requireDashboardAuth(request, env);
@@ -110,14 +139,15 @@ export async function onRequestPost({ request, env }) {
     let imported = 0;
     let skipped = 0;
     const errors = [];
+    const sample = [];
 
     for (let i = 1; i < rows.length; i++) {
       const cells = rows[i];
       try {
         const dateRaw = cols.date != null ? cells[cols.date] : null;
         const filledAt = dateRaw ? Math.floor(new Date(dateRaw).getTime() / 1000) : NaN;
-        const odometerRaw = Number(cells[cols.odometer]);
-        const gallonsRaw = Number(cells[cols.gallons]);
+        const odometerRaw = parseNumber(cells[cols.odometer]);
+        const gallonsRaw = parseDecimal(cells[cols.gallons]);
 
         if (!Number.isFinite(filledAt) || !Number.isFinite(odometerRaw) || !Number.isFinite(gallonsRaw) || odometerRaw <= 0 || gallonsRaw <= 0) {
           skipped++;
@@ -127,8 +157,8 @@ export async function onRequestPost({ request, env }) {
         const odometerKm = odoIsKm ? odometerRaw : odometerRaw * MI_TO_KM;
         const gallons = volumeIsLiters ? gallonsRaw * L_TO_GAL : gallonsRaw;
 
-        let pricePerGallon = cols.pricePerGallon != null ? Number(cells[cols.pricePerGallon]) : null;
-        let totalCost = cols.totalCost != null ? Number(cells[cols.totalCost]) : null;
+        let pricePerGallon = cols.pricePerGallon != null ? parseDecimal(cells[cols.pricePerGallon]) : null;
+        let totalCost = cols.totalCost != null ? parseDecimal(cells[cols.totalCost]) : null;
         if (!Number.isFinite(pricePerGallon)) pricePerGallon = null;
         if (!Number.isFinite(totalCost)) totalCost = null;
         if (volumeIsLiters && pricePerGallon != null) pricePerGallon = pricePerGallon / L_TO_GAL;
@@ -138,6 +168,16 @@ export async function onRequestPost({ request, env }) {
         let isPartial = false;
         if (cols.partial != null) isPartial = parseBool(cells[cols.partial]);
         else if (cols.full != null) isPartial = !parseBool(cells[cols.full]);
+
+        if (sample.length < 3) {
+          sample.push({
+            row: i + 1,
+            priceColumnRaw: cols.pricePerGallon != null ? cells[cols.pricePerGallon] : "(no price column matched)",
+            costColumnRaw: cols.totalCost != null ? cells[cols.totalCost] : "(no cost column matched)",
+            pricePerGallonParsed: pricePerGallon,
+            totalCostParsed: totalCost
+          });
+        }
 
         // REPLACE (not IGNORE) so re-uploading the same export after a
         // parsing fix corrects previously-imported rows in place, matched
@@ -169,7 +209,19 @@ export async function onRequestPost({ request, env }) {
       }
     }
 
-    return json({ imported, skipped, errors: errors.slice(0, 10), totalErrors: errors.length });
+    const matchedColumns = {};
+    for (const field of Object.keys(HEADER_ALIASES)) {
+      matchedColumns[field] = cols[field] != null ? headers[cols[field]] : null;
+    }
+
+    return json({
+      imported,
+      skipped,
+      errors: errors.slice(0, 10),
+      totalErrors: errors.length,
+      matchedColumns,
+      sample
+    });
   } catch (error) {
     return json({ error: error.message }, error.status || 502);
   }

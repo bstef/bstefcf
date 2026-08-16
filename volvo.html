@@ -215,6 +215,16 @@
   .card.span-2 { grid-column: span 2; }
   @media (max-width: 720px) { .card.span-2 { grid-column: span 1; } }
 
+  /* Full-width sub-row so paired cards (e.g. Engine + Warnings) stretch to
+     match each other's height, not whatever taller card happens to land in
+     the same auto-fit row of the outer grid. */
+  .card-row {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+  }
+
   .kv-row {
     display: flex;
     align-items: center;
@@ -641,6 +651,8 @@
   (function () {
     "use strict";
 
+    var VEHICLE_NICKNAME = "Indigo Jones";
+
     var COMMAND_META = {
       "lock": { label: "Lock", emoji: "🔒" },
       "unlock": { label: "Unlock", emoji: "🔓", sensitive: true },
@@ -865,13 +877,17 @@
         var vehicle = await api("/api/volvo/vehicle");
         showError(null);
         setConnDot(true);
-        document.getElementById("vin-label").textContent = "VIN " + (vehicle.vin || "").replace(/^(.{4}).+(.{4})$/, "$1••••$2");
+        document.getElementById("vin-label").textContent = VEHICLE_NICKNAME + " · VIN " + (vehicle.vin || "").replace(/^(.{4}).+(.{4})$/, "$1••••$2");
         document.getElementById("last-updated").textContent = "Updated " + new Date(vehicle.fetchedAt).toLocaleTimeString();
 
         renderHero(vehicle);
 
         var grid = document.getElementById("overview-grid");
         grid.innerHTML = "";
+
+        var controlsCard = card("Controls", true);
+        await renderControls(controlsCard.body);
+        grid.appendChild(controlsCard.el);
 
         var doorsCard = card("Doors");
         renderKvCard(doorsCard.body, vehicle.doors);
@@ -885,22 +901,24 @@
         renderKvCard(tyresCard.body, vehicle.tyres);
         grid.appendChild(tyresCard.el);
 
+        // Wrapped in their own full-width sub-row so these two (both
+        // usually short) stretch to match each other's height instead of
+        // whatever taller card the outer grid's auto-fit happens to place
+        // alongside them.
+        var engineWarningsRow = document.createElement("div");
+        engineWarningsRow.className = "card-row";
         var engineCard = card("Engine");
         renderKvCard(engineCard.body, vehicle.engineStatus);
-        grid.appendChild(engineCard.el);
-
+        engineWarningsRow.appendChild(engineCard.el);
         var warningsCard = card("Warnings");
         renderWarnings(warningsCard.body, vehicle.warnings);
-        grid.appendChild(warningsCard.el);
+        engineWarningsRow.appendChild(warningsCard.el);
+        grid.appendChild(engineWarningsRow);
 
         var diagCard = card("Diagnostics & statistics", true);
         var merged = Object.assign({}, vehicle.diagnostics, vehicle.statistics, vehicle.brakes);
         renderKvCard(diagCard.body, merged);
         grid.appendChild(diagCard.el);
-
-        var controlsCard = card("Controls", true);
-        await renderControls(controlsCard.body);
-        grid.appendChild(controlsCard.el);
 
         if (vehicle.unavailable && vehicle.unavailable.length) {
           var note = document.createElement("p");
@@ -1189,6 +1207,55 @@
       }
     });
 
+    // Column names and sample cell text come straight from a user-uploaded
+    // CSV, so they're built as text nodes here rather than interpolated
+    // into innerHTML — this dashboard stores its access token in
+    // localStorage and can issue vehicle commands, so DOM XSS here would be
+    // a real hole, not just a cosmetic bug.
+    function renderCsvImportResult(container, res) {
+      container.innerHTML = "";
+      var summary = document.createElement("div");
+      summary.textContent = "Imported " + res.imported + ", skipped " + res.skipped + (res.totalErrors ? " (" + res.totalErrors + " row error(s))" : "") + ".";
+      container.appendChild(summary);
+
+      if (res.matchedColumns) {
+        var colsHeading = document.createElement("strong");
+        colsHeading.style.display = "block";
+        colsHeading.style.marginTop = "10px";
+        colsHeading.textContent = "Columns matched:";
+        container.appendChild(colsHeading);
+        Object.keys(res.matchedColumns).forEach(function (field) {
+          var col = res.matchedColumns[field];
+          var row = document.createElement("div");
+          row.appendChild(document.createTextNode(field + " → "));
+          if (col) {
+            row.appendChild(document.createTextNode("\"" + col + "\""));
+          } else {
+            var em = document.createElement("em");
+            em.textContent = "not found";
+            row.appendChild(em);
+          }
+          container.appendChild(row);
+        });
+      }
+
+      if (res.sample && res.sample.length) {
+        var sampleHeading = document.createElement("strong");
+        sampleHeading.style.display = "block";
+        sampleHeading.style.marginTop = "10px";
+        sampleHeading.textContent = "First row(s) — price/cost parsing:";
+        container.appendChild(sampleHeading);
+        res.sample.forEach(function (s) {
+          var row = document.createElement("div");
+          row.appendChild(document.createTextNode(
+            "row " + s.row + ": price col raw=\"" + s.priceColumnRaw + "\" → " + s.pricePerGallonParsed +
+            " · cost col raw=\"" + s.costColumnRaw + "\" → " + s.totalCostParsed
+          ));
+          container.appendChild(row);
+        });
+      }
+    }
+
     document.getElementById("fuel-csv-btn").addEventListener("click", async function () {
       var input = document.getElementById("fuel-csv-input");
       var resultEl = document.getElementById("fuel-csv-result");
@@ -1200,7 +1267,7 @@
       try {
         var text = await input.files[0].text();
         var res = await api("/api/volvo/fuel-import", { method: "POST", headers: { "content-type": "text/csv" }, body: text });
-        resultEl.textContent = "Imported " + res.imported + ", skipped " + res.skipped + (res.totalErrors ? " (" + res.totalErrors + " row error(s))" : "") + ".";
+        renderCsvImportResult(resultEl, res);
         loadFuel();
       } catch (err) {
         resultEl.textContent = "Import failed: " + err.message;
