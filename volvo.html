@@ -903,6 +903,17 @@
       return { value: field };
     }
 
+    // Volvo's API reports distances in km regardless of the dashboard's
+    // mi/km toggle — this is what makes fields like "distance to service"
+    // in Diagnostics & statistics follow that toggle instead of always
+    // showing km.
+    function convertDisplayUnit(value, unit) {
+      if (state.unit === "mi" && typeof value === "number" && unit && /^km$/i.test(unit)) {
+        return { value: (value * 0.621371).toFixed(1), unit: "mi" };
+      }
+      return { value: value, unit: unit };
+    }
+
     // Matches fields like { exteriorImageUrl: "https://...", interiorImageUrl: "https://..." }
     // that the vehicle-details endpoint returns — worth rendering as actual
     // pictures instead of falling through to a JSON.stringify() dump.
@@ -1003,9 +1014,10 @@
           return;
         }
         var unwrapped = unwrapField(obj[key]);
+        var converted = convertDisplayUnit(unwrapped.value, unwrapped.unit);
         var row = document.createElement("div");
         row.className = "kv-row";
-        var display = humanizeValue(unwrapped.value) + (unwrapped.unit ? " " + unwrapped.unit : "");
+        var display = humanizeValue(converted.value) + (converted.unit ? " " + converted.unit : "");
         var cls = badgeClass(unwrapped.value);
         var kSpan = document.createElement("span");
         kSpan.className = "k";
