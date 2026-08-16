@@ -215,6 +215,16 @@
   .card.span-2 { grid-column: span 2; }
   @media (max-width: 720px) { .card.span-2 { grid-column: span 1; } }
 
+  /* Full-width sub-row so paired cards (e.g. Engine + Warnings) stretch to
+     match each other's height, not whatever taller card happens to land in
+     the same auto-fit row of the outer grid. */
+  .card-row {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+  }
+
   .kv-row {
     display: flex;
     align-items: center;
@@ -641,6 +651,8 @@
   (function () {
     "use strict";
 
+    var VEHICLE_NICKNAME = "Indigo Jones";
+
     var COMMAND_META = {
       "lock": { label: "Lock", emoji: "🔒" },
       "unlock": { label: "Unlock", emoji: "🔓", sensitive: true },
@@ -865,13 +877,17 @@
         var vehicle = await api("/api/volvo/vehicle");
         showError(null);
         setConnDot(true);
-        document.getElementById("vin-label").textContent = "VIN " + (vehicle.vin || "").replace(/^(.{4}).+(.{4})$/, "$1••••$2");
+        document.getElementById("vin-label").textContent = VEHICLE_NICKNAME + " · VIN " + (vehicle.vin || "").replace(/^(.{4}).+(.{4})$/, "$1••••$2");
         document.getElementById("last-updated").textContent = "Updated " + new Date(vehicle.fetchedAt).toLocaleTimeString();
 
         renderHero(vehicle);
 
         var grid = document.getElementById("overview-grid");
         grid.innerHTML = "";
+
+        var controlsCard = card("Controls", true);
+        await renderControls(controlsCard.body);
+        grid.appendChild(controlsCard.el);
 
         var doorsCard = card("Doors");
         renderKvCard(doorsCard.body, vehicle.doors);
@@ -885,22 +901,24 @@
         renderKvCard(tyresCard.body, vehicle.tyres);
         grid.appendChild(tyresCard.el);
 
+        // Wrapped in their own full-width sub-row so these two (both
+        // usually short) stretch to match each other's height instead of
+        // whatever taller card the outer grid's auto-fit happens to place
+        // alongside them.
+        var engineWarningsRow = document.createElement("div");
+        engineWarningsRow.className = "card-row";
         var engineCard = card("Engine");
         renderKvCard(engineCard.body, vehicle.engineStatus);
-        grid.appendChild(engineCard.el);
-
+        engineWarningsRow.appendChild(engineCard.el);
         var warningsCard = card("Warnings");
         renderWarnings(warningsCard.body, vehicle.warnings);
-        grid.appendChild(warningsCard.el);
+        engineWarningsRow.appendChild(warningsCard.el);
+        grid.appendChild(engineWarningsRow);
 
         var diagCard = card("Diagnostics & statistics", true);
         var merged = Object.assign({}, vehicle.diagnostics, vehicle.statistics, vehicle.brakes);
         renderKvCard(diagCard.body, merged);
         grid.appendChild(diagCard.el);
-
-        var controlsCard = card("Controls", true);
-        await renderControls(controlsCard.body);
-        grid.appendChild(controlsCard.el);
 
         if (vehicle.unavailable && vehicle.unavailable.length) {
           var note = document.createElement("p");
