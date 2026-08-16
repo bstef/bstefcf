@@ -239,6 +239,7 @@
   }
   .card.span-2 { grid-column: span 2; }
   @media (max-width: 720px) { .card.span-2 { grid-column: span 1; } }
+  .card.span-full { grid-column: 1 / -1; }
 
   /* Full-width sub-row so paired cards (e.g. Engine + Warnings) stretch to
      match each other's height, not whatever taller card happens to land in
@@ -565,8 +566,8 @@
 
     <nav class="tabs">
       <button class="tab-btn active" data-tab="overview">Overview &amp; Controls</button>
-      <button class="tab-btn" data-tab="trips">Trips &amp; Map</button>
       <button class="tab-btn" data-tab="fuel">Fuel</button>
+      <button class="tab-btn" data-tab="trips">Trips &amp; Map</button>
       <button class="tab-btn" data-tab="updates">Updates</button>
     </nav>
 
@@ -923,25 +924,25 @@
         renderKvCard(windowsCard.body, vehicle.windows);
         grid.appendChild(windowsCard.el);
 
+        // Wrapped in their own full-width sub-row so these three (all
+        // usually short) stretch to match each other's height and split
+        // the row evenly, instead of whatever taller card the outer grid's
+        // auto-fit happens to place alongside them.
+        var statusRow = document.createElement("div");
+        statusRow.className = "card-row";
         var tyresCard = card("Tyres");
         renderKvCard(tyresCard.body, vehicle.tyres);
-        grid.appendChild(tyresCard.el);
-
-        // Wrapped in their own full-width sub-row so these two (both
-        // usually short) stretch to match each other's height instead of
-        // whatever taller card the outer grid's auto-fit happens to place
-        // alongside them.
-        var engineWarningsRow = document.createElement("div");
-        engineWarningsRow.className = "card-row";
+        statusRow.appendChild(tyresCard.el);
         var engineCard = card("Engine");
         renderKvCard(engineCard.body, vehicle.engineStatus);
-        engineWarningsRow.appendChild(engineCard.el);
+        statusRow.appendChild(engineCard.el);
         var warningsCard = card("Warnings");
         renderWarnings(warningsCard.body, vehicle.warnings);
-        engineWarningsRow.appendChild(warningsCard.el);
-        grid.appendChild(engineWarningsRow);
+        statusRow.appendChild(warningsCard.el);
+        grid.appendChild(statusRow);
 
-        var diagCard = card("Diagnostics & statistics", true);
+        var diagCard = card("Diagnostics & statistics");
+        diagCard.el.classList.add("span-full");
         var merged = Object.assign({}, vehicle.diagnostics, vehicle.statistics, vehicle.brakes);
         renderKvCard(diagCard.body, merged);
         grid.appendChild(diagCard.el);
