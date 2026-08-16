@@ -156,6 +156,9 @@
 
   .banner {
     display: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
     padding: 12px 14px;
     border-radius: 8px;
     background: var(--bad-bg);
@@ -164,7 +167,19 @@
     font-size: 13px;
     margin-bottom: 16px;
   }
-  .banner.show { display: block; }
+  .banner.show { display: flex; }
+  .banner-close {
+    font: inherit;
+    cursor: pointer;
+    background: none;
+    border: none;
+    color: var(--bad);
+    font-size: 15px;
+    line-height: 1;
+    padding: 2px 4px;
+    flex-shrink: 0;
+  }
+  .banner-close:hover { opacity: 0.7; }
 
   .hero {
     display: grid;
@@ -418,7 +433,32 @@
     font-size: 13px;
   }
 
-  .changelog li { margin-bottom: 6px; font-size: 13px; color: var(--muted); }
+  .changelog { margin-top: 10px; }
+  .changelog-entry {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin-bottom: 8px;
+  }
+  .changelog-entry:last-child { margin-bottom: 0; }
+  .changelog-entry summary {
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    list-style: none;
+  }
+  .changelog-entry summary::-webkit-details-marker { display: none; }
+  .changelog-entry summary::before {
+    content: "▸";
+    display: inline-block;
+    margin-right: 6px;
+    color: var(--accent);
+    transition: transform 0.15s ease;
+  }
+  .changelog-entry[open] summary::before { transform: rotate(90deg); }
+  .changelog-entry ul { margin: 8px 0 2px; padding-left: 20px; }
+  .changelog-entry li { margin-bottom: 6px; font-size: 13px; color: var(--muted); }
   .new-badge {
     display: inline-block;
     margin-left: 8px;
@@ -922,8 +962,18 @@
 
     function showError(msg) {
       var el = document.getElementById("error-banner");
+      el.innerHTML = "";
       if (!msg) { el.classList.remove("show"); return; }
-      el.textContent = msg;
+      var text = document.createElement("span");
+      text.textContent = msg;
+      var closeBtn = document.createElement("button");
+      closeBtn.type = "button";
+      closeBtn.className = "banner-close";
+      closeBtn.setAttribute("aria-label", "Dismiss");
+      closeBtn.textContent = "✕";
+      closeBtn.addEventListener("click", function () { showError(null); });
+      el.appendChild(text);
+      el.appendChild(closeBtn);
       el.classList.add("show");
     }
 
@@ -1253,15 +1303,38 @@
         document.getElementById("app-new-badge").innerHTML = isNew ? '<span class="new-badge">Updated</span>' : "";
         localStorage.setItem("volvo-app-version-seen", app.version);
 
-        var html = '<div class="kv-row"><span class="k">Version</span><span class="v">' + app.version + '</span></div>';
-        html += '<ul class="changelog">';
-        (app.changelog || []).forEach(function (entry) {
-          html += '<li><strong>' + entry.version + '</strong> — ' + entry.date + '<ul>';
-          (entry.notes || []).forEach(function (note) { html += "<li>" + note + "</li>"; });
-          html += "</ul></li>";
+        appEl.innerHTML = "";
+        var versionRow = document.createElement("div");
+        versionRow.className = "kv-row";
+        var versionLabel = document.createElement("span");
+        versionLabel.className = "k";
+        versionLabel.textContent = "Version";
+        var versionValue = document.createElement("span");
+        versionValue.className = "v";
+        versionValue.textContent = app.version;
+        versionRow.appendChild(versionLabel);
+        versionRow.appendChild(versionValue);
+        appEl.appendChild(versionRow);
+
+        var list = document.createElement("div");
+        list.className = "changelog";
+        (app.changelog || []).forEach(function (entry, index) {
+          var details = document.createElement("details");
+          details.className = "changelog-entry";
+          if (index === 0) details.open = true;
+          var summary = document.createElement("summary");
+          summary.textContent = entry.version + " — " + entry.date;
+          details.appendChild(summary);
+          var notes = document.createElement("ul");
+          (entry.notes || []).forEach(function (note) {
+            var li = document.createElement("li");
+            li.textContent = note;
+            notes.appendChild(li);
+          });
+          details.appendChild(notes);
+          list.appendChild(details);
         });
-        html += "</ul>";
-        appEl.innerHTML = html;
+        appEl.appendChild(list);
       } catch (err) {
         document.getElementById("car-software-kv").innerHTML = '<p class="empty-note">' + err.message + '</p>';
       }

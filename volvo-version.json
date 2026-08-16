@@ -1,7 +1,66 @@
 {
-  "version": "1.0.0",
-  "releasedAt": "2026-08-15",
+  "version": "1.7.0",
+  "releasedAt": "2026-08-16",
   "changelog": [
+    {
+      "version": "1.7.0",
+      "date": "2026-08-16",
+      "notes": [
+        "Vehicle photos (exterior/interior) now render as actual pictures on the Updates tab instead of a raw JSON dump."
+      ]
+    },
+    {
+      "version": "1.6.0",
+      "date": "2026-08-16",
+      "notes": [
+        "Fuel tab layout: Import from Fuelly now sits beside Fill-up history instead of stacked below it.",
+        "Fixed the Fuelly badge overflowing its card on narrow screens.",
+        "Fixed a layout bug that left a large empty gap next to the fill-up form."
+      ]
+    },
+    {
+      "version": "1.5.0",
+      "date": "2026-08-16",
+      "notes": [
+        "Overview tab: vehicle nickname shown next to the (still obfuscated) VIN.",
+        "Controls moved up near the top; Tyres/Engine/Warnings grouped into one row; Diagnostics moved to the bottom and spans full width.",
+        "Each hero stat card and the Controls card now gets its own accent color, in both dark and light mode."
+      ]
+    },
+    {
+      "version": "1.4.0",
+      "date": "2026-08-16",
+      "notes": [
+        "Fixed fuel CSV import silently dropping total cost — column matching is now bidirectional, currency symbols and decimal-comma formats are handled correctly.",
+        "Import result now shows exactly which CSV columns matched, to make future format mismatches easy to diagnose.",
+        "Fixed a DOM XSS hole in how that diagnostic output was rendered."
+      ]
+    },
+    {
+      "version": "1.3.0",
+      "date": "2026-08-16",
+      "notes": [
+        "Added a Terms & Conditions page, required to publish the Volvo developer app.",
+        "Added a Fuelly MPG badge linking out to the public Fuelly car page."
+      ]
+    },
+    {
+      "version": "1.2.0",
+      "date": "2026-08-16",
+      "notes": [
+        "Added a guided OAuth setup page (/volvo-setup) that walks through Volvo's authorization-code + PKCE flow end to end, instead of hand-building URLs.",
+        "Corrected the Volvo OAuth scope list against a real app registration, after trial and error with Volvo's \"invalid_scope\" errors."
+      ]
+    },
+    {
+      "version": "1.1.0",
+      "date": "2026-08-15",
+      "notes": [
+        "Every dashboard API route now requires an access code (DASHBOARD_TOKEN) — previously anyone with the URL could view location data or send lock/unlock/climate/engine commands.",
+        "Fixed a bug where loading the Overview tab could fail token refresh due to many simultaneous API calls racing Volvo's rotating refresh token.",
+        "Added self-hosted fuel tracking: log fill-ups directly, or import history from a Fuelly CSV export (Fuelly has no public API)."
+      ]
+    },
     {
       "version": "1.0.0",
       "date": "2026-08-15",
