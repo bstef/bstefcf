@@ -940,6 +940,47 @@
       container.appendChild(wrap);
     }
 
+    // Catches other flat descriptive objects the API returns (e.g. a
+    // vehicle "descriptions" field: {model, upholstery, steering}) that
+    // aren't a {value, unit, timestamp}-wrapped field and aren't an image
+    // map — same JSON.stringify-fallback problem as images had, generalized.
+    function looksLikeNestedObject(value) {
+      if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+      if ("value" in value) return false;
+      var keys = Object.keys(value);
+      if (!keys.length) return false;
+      return keys.every(function (k) {
+        var v = value[k];
+        return v === null || typeof v === "string" || typeof v === "number" || typeof v === "boolean";
+      });
+    }
+
+    function renderNestedBlock(container, key, nested) {
+      var wrap = document.createElement("div");
+      wrap.className = "kv-images-row";
+      var label = document.createElement("div");
+      label.className = "kv-images-label";
+      label.textContent = humanizeKey(key);
+      wrap.appendChild(label);
+      Object.keys(nested).forEach(function (subKey) {
+        var row = document.createElement("div");
+        row.className = "kv-row";
+        var kSpan = document.createElement("span");
+        kSpan.className = "k";
+        kSpan.textContent = humanizeKey(subKey);
+        var vSpan = document.createElement("span");
+        vSpan.className = "v";
+        var badge = document.createElement("span");
+        badge.className = "badge " + badgeClass(nested[subKey]);
+        badge.textContent = humanizeValue(nested[subKey]);
+        vSpan.appendChild(badge);
+        row.appendChild(kSpan);
+        row.appendChild(vSpan);
+        wrap.appendChild(row);
+      });
+      container.appendChild(wrap);
+    }
+
     function renderKvCard(container, obj, opts) {
       opts = opts || {};
       container.innerHTML = "";
@@ -955,6 +996,10 @@
       keys.forEach(function (key) {
         if (looksLikeImageMap(obj[key])) {
           renderImageBlock(container, key, obj[key]);
+          return;
+        }
+        if (looksLikeNestedObject(obj[key])) {
+          renderNestedBlock(container, key, obj[key]);
           return;
         }
         var unwrapped = unwrapField(obj[key]);
