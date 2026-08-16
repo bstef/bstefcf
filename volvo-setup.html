@@ -123,8 +123,8 @@
 
     <div class="card">
       <h2><span class="step-num">2</span>Scopes</h2>
-      <p>Best-effort starting point — <strong>verify against your app's actual API subscriptions</strong> on developer.volvocars.com and edit if theirs differs. Wrong/missing scopes won't error here; they'll just silently withhold that data later.</p>
-      <textarea id="scopes">openid conve:fuel_status conve:battery_charge_level conve:odometer_status conve:trip_statistics conve:diagnostics_engine_status conve:diagnostics_workshop conve:doors_status conve:engine_status conve:environment conve:windows_status conve:tyre_status conve:warnings conve:brake_status conve:navigation conve:lock conve:lock_status conve:unlock conve:command_accessibility conve:commands conve:climatization_start_stop conve:honk_flash conve:vehicle_relation energy:state energy:capability location:read</textarea>
+      <p>Every scope this dashboard's backend can use, across Connected Vehicle, Energy, and Location — confirmed against a real "Publish application" summary screen. <strong>Your app must actually have each of these checked</strong> in its own Publish/Edit screen on developer.volvocars.com, or Volvo will reject the whole request with <code>invalid_scope</code> — trim this list to match yours if it's narrower.</p>
+      <textarea id="scopes">openid conve:battery_charge_level conve:brake_status conve:climatization_start_stop conve:command_accessibility conve:commands conve:connectivity_status conve:diagnostics_engine_status conve:diagnostics_workshop conve:doors_status conve:engine_start_stop conve:engine_status conve:environment conve:fuel_status conve:honk_flash conve:lock conve:lock_status conve:navigation conve:odometer_status conve:trip_statistics conve:tyre_status conve:unlock conve:vehicle_relation conve:warnings conve:windows_status energy:capability:read energy:state:read location:read</textarea>
     </div>
 
     <div class="card">
