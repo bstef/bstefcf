@@ -287,6 +287,41 @@
 
   .empty-note { color: var(--muted); font-size: 13px; padding: 6px 0; }
 
+  .kv-images-row { padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .kv-images-row:last-child { border-bottom: none; }
+  .kv-images-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .kv-images {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .kv-images figure {
+    margin: 0;
+    flex: 1 1 180px;
+    max-width: 260px;
+  }
+  .kv-images img {
+    display: block;
+    width: 100%;
+    height: 130px;
+    object-fit: cover;
+    border-radius: 8px;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+  }
+  .kv-images figcaption {
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--muted);
+    text-align: center;
+  }
+
   .controls-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
@@ -795,6 +830,43 @@
       return { value: field };
     }
 
+    // Matches fields like { exteriorImageUrl: "https://...", interiorImageUrl: "https://..." }
+    // that the vehicle-details endpoint returns — worth rendering as actual
+    // pictures instead of falling through to a JSON.stringify() dump.
+    function looksLikeImageMap(value) {
+      if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+      var entries = Object.keys(value);
+      if (!entries.length) return false;
+      return entries.every(function (k) {
+        return /image/i.test(k) && typeof value[k] === "string" && /^https?:\/\//i.test(value[k]);
+      });
+    }
+
+    function renderImageBlock(container, key, imgMap) {
+      var wrap = document.createElement("div");
+      wrap.className = "kv-images-row";
+      var label = document.createElement("div");
+      label.className = "kv-images-label";
+      label.textContent = humanizeKey(key);
+      wrap.appendChild(label);
+      var gallery = document.createElement("div");
+      gallery.className = "kv-images";
+      Object.keys(imgMap).forEach(function (imgKey) {
+        var figure = document.createElement("figure");
+        var img = document.createElement("img");
+        img.src = imgMap[imgKey];
+        img.alt = humanizeKey(imgKey);
+        img.loading = "lazy";
+        var caption = document.createElement("figcaption");
+        caption.textContent = humanizeKey(imgKey).replace(/ Image Url$/i, "");
+        figure.appendChild(img);
+        figure.appendChild(caption);
+        gallery.appendChild(figure);
+      });
+      wrap.appendChild(gallery);
+      container.appendChild(wrap);
+    }
+
     function renderKvCard(container, obj, opts) {
       opts = opts || {};
       container.innerHTML = "";
@@ -808,14 +880,26 @@
         return;
       }
       keys.forEach(function (key) {
+        if (looksLikeImageMap(obj[key])) {
+          renderImageBlock(container, key, obj[key]);
+          return;
+        }
         var unwrapped = unwrapField(obj[key]);
         var row = document.createElement("div");
         row.className = "kv-row";
         var display = humanizeValue(unwrapped.value) + (unwrapped.unit ? " " + unwrapped.unit : "");
         var cls = badgeClass(unwrapped.value);
-        row.innerHTML =
-          '<span class="k">' + humanizeKey(key) + '</span>' +
-          '<span class="v"><span class="badge ' + cls + '">' + display + "</span></span>";
+        var kSpan = document.createElement("span");
+        kSpan.className = "k";
+        kSpan.textContent = humanizeKey(key);
+        var vSpan = document.createElement("span");
+        vSpan.className = "v";
+        var badge = document.createElement("span");
+        badge.className = "badge " + cls;
+        badge.textContent = display;
+        vSpan.appendChild(badge);
+        row.appendChild(kSpan);
+        row.appendChild(vSpan);
         container.appendChild(row);
       });
     }
