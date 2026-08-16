@@ -1200,7 +1200,22 @@
       try {
         var text = await input.files[0].text();
         var res = await api("/api/volvo/fuel-import", { method: "POST", headers: { "content-type": "text/csv" }, body: text });
-        resultEl.textContent = "Imported " + res.imported + ", skipped " + res.skipped + (res.totalErrors ? " (" + res.totalErrors + " row error(s))" : "") + ".";
+        var html = "Imported " + res.imported + ", skipped " + res.skipped + (res.totalErrors ? " (" + res.totalErrors + " row error(s))" : "") + ".";
+        if (res.matchedColumns) {
+          html += "<br><br><strong>Columns matched:</strong><br>";
+          Object.keys(res.matchedColumns).forEach(function (field) {
+            var col = res.matchedColumns[field];
+            html += field + " → " + (col ? '"' + col + '"' : "<em>not found</em>") + "<br>";
+          });
+        }
+        if (res.sample && res.sample.length) {
+          html += "<br><strong>First row(s) — price/cost parsing:</strong><br>";
+          res.sample.forEach(function (s) {
+            html += "row " + s.row + ": price col raw=\"" + s.priceColumnRaw + "\" → " + s.pricePerGallonParsed +
+              " · cost col raw=\"" + s.costColumnRaw + "\" → " + s.totalCostParsed + "<br>";
+          });
+        }
+        resultEl.innerHTML = html;
         loadFuel();
       } catch (err) {
         resultEl.textContent = "Import failed: " + err.message;
