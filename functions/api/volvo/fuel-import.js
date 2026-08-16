@@ -87,13 +87,33 @@ function parseBool(v) {
   return s === "1" || s === "true" || s === "yes" || s === "y";
 }
 
-// Strips currency symbols, thousands separators, and stray whitespace/units
-// (e.g. "$3.499", "3,499", "3.499 USD") before parsing — a bare Number() on
-// values like that just silently yields NaN.
+// For large-magnitude fields (odometer), where a comma is virtually always
+// a thousands separator (e.g. "123,456") — strips it along with currency
+// symbols and stray whitespace/units before parsing.
 function parseNumber(raw) {
   if (raw == null) return NaN;
   const cleaned = String(raw).replace(/[^0-9.\-]/g, "");
   return cleaned === "" ? NaN : Number(cleaned);
+}
+
+// For small-magnitude fields (gallons, price/gallon, total cost) — these
+// never legitimately reach the thousands, so a single comma is far more
+// likely a European decimal separator ("3,499") than a thousands one.
+// Blindly stripping it the way parseNumber does would silently turn that
+// into 3499, a 1000x corruption. Multiple commas, or a comma alongside a
+// dot, are still treated as thousands grouping.
+function parseDecimal(raw) {
+  if (raw == null) return NaN;
+  let s = String(raw).trim().replace(/[^0-9.,\-]/g, "");
+  if (s === "") return NaN;
+  const hasComma = s.indexOf(",") !== -1;
+  const hasDot = s.indexOf(".") !== -1;
+  if (hasComma && hasDot) {
+    s = s.lastIndexOf(",") > s.lastIndexOf(".") ? s.replace(/\./g, "").replace(",", ".") : s.replace(/,/g, "");
+  } else if (hasComma) {
+    s = (s.match(/,/g) || []).length === 1 ? s.replace(",", ".") : s.replace(/,/g, "");
+  }
+  return s === "" || s === "-" ? NaN : Number(s);
 }
 
 export async function onRequestPost({ request, env }) {
@@ -127,7 +147,7 @@ export async function onRequestPost({ request, env }) {
         const dateRaw = cols.date != null ? cells[cols.date] : null;
         const filledAt = dateRaw ? Math.floor(new Date(dateRaw).getTime() / 1000) : NaN;
         const odometerRaw = parseNumber(cells[cols.odometer]);
-        const gallonsRaw = parseNumber(cells[cols.gallons]);
+        const gallonsRaw = parseDecimal(cells[cols.gallons]);
 
         if (!Number.isFinite(filledAt) || !Number.isFinite(odometerRaw) || !Number.isFinite(gallonsRaw) || odometerRaw <= 0 || gallonsRaw <= 0) {
           skipped++;
@@ -137,8 +157,8 @@ export async function onRequestPost({ request, env }) {
         const odometerKm = odoIsKm ? odometerRaw : odometerRaw * MI_TO_KM;
         const gallons = volumeIsLiters ? gallonsRaw * L_TO_GAL : gallonsRaw;
 
-        let pricePerGallon = cols.pricePerGallon != null ? parseNumber(cells[cols.pricePerGallon]) : null;
-        let totalCost = cols.totalCost != null ? parseNumber(cells[cols.totalCost]) : null;
+        let pricePerGallon = cols.pricePerGallon != null ? parseDecimal(cells[cols.pricePerGallon]) : null;
+        let totalCost = cols.totalCost != null ? parseDecimal(cells[cols.totalCost]) : null;
         if (!Number.isFinite(pricePerGallon)) pricePerGallon = null;
         if (!Number.isFinite(totalCost)) totalCost = null;
         if (volumeIsLiters && pricePerGallon != null) pricePerGallon = pricePerGallon / L_TO_GAL;

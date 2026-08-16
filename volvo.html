@@ -1189,6 +1189,55 @@
       }
     });
 
+    // Column names and sample cell text come straight from a user-uploaded
+    // CSV, so they're built as text nodes here rather than interpolated
+    // into innerHTML — this dashboard stores its access token in
+    // localStorage and can issue vehicle commands, so DOM XSS here would be
+    // a real hole, not just a cosmetic bug.
+    function renderCsvImportResult(container, res) {
+      container.innerHTML = "";
+      var summary = document.createElement("div");
+      summary.textContent = "Imported " + res.imported + ", skipped " + res.skipped + (res.totalErrors ? " (" + res.totalErrors + " row error(s))" : "") + ".";
+      container.appendChild(summary);
+
+      if (res.matchedColumns) {
+        var colsHeading = document.createElement("strong");
+        colsHeading.style.display = "block";
+        colsHeading.style.marginTop = "10px";
+        colsHeading.textContent = "Columns matched:";
+        container.appendChild(colsHeading);
+        Object.keys(res.matchedColumns).forEach(function (field) {
+          var col = res.matchedColumns[field];
+          var row = document.createElement("div");
+          row.appendChild(document.createTextNode(field + " → "));
+          if (col) {
+            row.appendChild(document.createTextNode("\"" + col + "\""));
+          } else {
+            var em = document.createElement("em");
+            em.textContent = "not found";
+            row.appendChild(em);
+          }
+          container.appendChild(row);
+        });
+      }
+
+      if (res.sample && res.sample.length) {
+        var sampleHeading = document.createElement("strong");
+        sampleHeading.style.display = "block";
+        sampleHeading.style.marginTop = "10px";
+        sampleHeading.textContent = "First row(s) — price/cost parsing:";
+        container.appendChild(sampleHeading);
+        res.sample.forEach(function (s) {
+          var row = document.createElement("div");
+          row.appendChild(document.createTextNode(
+            "row " + s.row + ": price col raw=\"" + s.priceColumnRaw + "\" → " + s.pricePerGallonParsed +
+            " · cost col raw=\"" + s.costColumnRaw + "\" → " + s.totalCostParsed
+          ));
+          container.appendChild(row);
+        });
+      }
+    }
+
     document.getElementById("fuel-csv-btn").addEventListener("click", async function () {
       var input = document.getElementById("fuel-csv-input");
       var resultEl = document.getElementById("fuel-csv-result");
@@ -1200,22 +1249,7 @@
       try {
         var text = await input.files[0].text();
         var res = await api("/api/volvo/fuel-import", { method: "POST", headers: { "content-type": "text/csv" }, body: text });
-        var html = "Imported " + res.imported + ", skipped " + res.skipped + (res.totalErrors ? " (" + res.totalErrors + " row error(s))" : "") + ".";
-        if (res.matchedColumns) {
-          html += "<br><br><strong>Columns matched:</strong><br>";
-          Object.keys(res.matchedColumns).forEach(function (field) {
-            var col = res.matchedColumns[field];
-            html += field + " → " + (col ? '"' + col + '"' : "<em>not found</em>") + "<br>";
-          });
-        }
-        if (res.sample && res.sample.length) {
-          html += "<br><strong>First row(s) — price/cost parsing:</strong><br>";
-          res.sample.forEach(function (s) {
-            html += "row " + s.row + ": price col raw=\"" + s.priceColumnRaw + "\" → " + s.pricePerGallonParsed +
-              " · cost col raw=\"" + s.costColumnRaw + "\" → " + s.totalCostParsed + "<br>";
-          });
-        }
-        resultEl.innerHTML = html;
+        renderCsvImportResult(resultEl, res);
         loadFuel();
       } catch (err) {
         resultEl.textContent = "Import failed: " + err.message;
