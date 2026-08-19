@@ -1,7 +1,15 @@
 {
-  "version": "1.8.0",
+  "version": "1.9.0",
   "releasedAt": "2026-08-19",
   "changelog": [
+    {
+      "version": "1.9.0",
+      "date": "2026-08-19",
+      "notes": [
+        "Overview tab now shows gas and electric distance-to-empty as separate stats side by side under the odometer, instead of one combined \"Range\" card.",
+        "Doors/Windows/Tyres/Engine/Diagnostics cards now show the actual API error (e.g. a 403 scope/subscription issue) when Volvo can't report that resource, instead of a silent \"no data\"."
+      ]
+    },
     {
       "version": "1.8.0",
       "date": "2026-08-19",

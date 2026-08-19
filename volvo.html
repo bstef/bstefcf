@@ -1048,16 +1048,29 @@
       container.appendChild(wrap);
     }
 
+    // Upstream error reasons (opts.emptyText, sourced from Volvo's API
+    // response) are attacker-influenceable text, not markup — built with
+    // textContent rather than innerHTML so a reason containing HTML can't
+    // execute in this origin, which holds the dashboard access token and
+    // can issue vehicle commands.
+    function renderEmptyNote(container, text) {
+      container.innerHTML = "";
+      var p = document.createElement("p");
+      p.className = "empty-note";
+      p.textContent = text;
+      container.appendChild(p);
+    }
+
     function renderKvCard(container, obj, opts) {
       opts = opts || {};
       container.innerHTML = "";
       if (!obj || typeof obj !== "object") {
-        container.innerHTML = '<p class="empty-note">' + (opts.emptyText || "No data reported for this vehicle.") + "</p>";
+        renderEmptyNote(container, opts.emptyText || "No data reported for this vehicle.");
         return;
       }
       var keys = Object.keys(obj).filter(function (k) { return !opts.skip || opts.skip.indexOf(k) === -1; });
       if (!keys.length) {
-        container.innerHTML = '<p class="empty-note">' + (opts.emptyText || "No data reported for this vehicle.") + "</p>";
+        renderEmptyNote(container, opts.emptyText || "No data reported for this vehicle.");
         return;
       }
       keys.forEach(function (key) {
@@ -1168,21 +1181,26 @@
       var odo = vehicle.odometer && unwrapField(vehicle.odometer.odometer || vehicle.odometer);
       hero.appendChild(heroCard("Odometer", odo && odo.value != null ? fmtDistance(odo.value) : "—", null));
 
+      // Gas and electric distance-to-empty side by side right under the
+      // odometer — always both, even though gas is the one usually in play,
+      // since a plug-in hybrid still wants the electric range visible.
       var energy = vehicle.energy || {};
+      var fuelRange = vehicle.fuel && vehicle.fuel.distanceToEmpty;
+      hero.appendChild(heroCard("Fuel range", fuelRange ? fmtDistance(unwrapField(fuelRange).value) : "—", null));
+      var electricRange = energy.electricRange;
+      hero.appendChild(heroCard("Electric range", electricRange ? fmtDistance(unwrapField(electricRange).value) : "—", null));
+
       var battery = energy.batteryChargeLevel || energy.chargeLevel;
-      var fuel = vehicle.fuel && (vehicle.fuel.fuelAmount || vehicle.fuel.fuelAmountLevel);
+      var fuelLevel = vehicle.fuel && (vehicle.fuel.fuelAmount || vehicle.fuel.fuelAmountLevel);
       if (battery) {
         var bVal = unwrapField(battery).value;
         hero.appendChild(heroCard("Battery", bVal != null ? bVal + "%" : "—", bVal > 20 ? "good" : "bad"));
-      } else if (fuel) {
-        var fVal = unwrapField(fuel).value;
+      } else if (fuelLevel) {
+        var fVal = unwrapField(fuelLevel).value;
         hero.appendChild(heroCard("Fuel", fVal != null ? humanizeValue(fVal) : "—", null));
       } else {
         hero.appendChild(heroCard("Battery / Fuel", "Not reported", null));
       }
-
-      var range = energy.electricRange || (vehicle.fuel && vehicle.fuel.distanceToEmpty);
-      hero.appendChild(heroCard("Range", range ? fmtDistance(unwrapField(range).value) : "—", null));
     }
 
     function heroCard(label, value, tone) {
@@ -1216,6 +1234,46 @@
 
         renderHero(vehicle);
 
+        // Volvo fetches each resource independently server-side and marks
+        // ones that failed (403 scope/subscription issue, 404 unsupported by
+        // this vehicle, etc.) here instead of just omitting them — surface
+        // that reason in the card itself instead of a generic "no data",
+        // since "the API rejected this" and "the vehicle reports nothing
+        // here" need different fixes.
+        var unavailableMap = {};
+        (vehicle.unavailable || []).forEach(function (u) { unavailableMap[u.resource] = u; });
+        function unavailableText(key) {
+          var u = unavailableMap[key];
+          if (!u) return undefined;
+          return "Couldn't load: " + (u.reason || "unknown error") + (u.status ? " (HTTP " + u.status + ")" : "");
+        }
+        // For cards that merge multiple resources (Diagnostics & statistics
+        // merges diagnostics/statistics/brakes): renderKvCard's emptyText
+        // only shows when the merged object has zero keys, so a resource
+        // that failed alongside one that succeeded would otherwise vanish
+        // with no trace. Append an explicit failure row per failed resource
+        // instead, regardless of what else rendered.
+        function appendResourceFailures(container, keys) {
+          keys.forEach(function (key) {
+            var u = unavailableMap[key];
+            if (!u) return;
+            var row = document.createElement("div");
+            row.className = "kv-row";
+            var kSpan = document.createElement("span");
+            kSpan.className = "k";
+            kSpan.textContent = humanizeKey(key) + " unavailable";
+            var vSpan = document.createElement("span");
+            vSpan.className = "v";
+            var badge = document.createElement("span");
+            badge.className = "badge bad";
+            badge.textContent = (u.reason || "unknown error") + (u.status ? " (HTTP " + u.status + ")" : "");
+            vSpan.appendChild(badge);
+            row.appendChild(kSpan);
+            row.appendChild(vSpan);
+            container.appendChild(row);
+          });
+        }
+
         var grid = document.getElementById("overview-grid");
         grid.innerHTML = "";
 
@@ -1225,11 +1283,11 @@
         grid.appendChild(controlsCard.el);
 
         var doorsCard = card("Doors");
-        renderKvCard(doorsCard.body, vehicle.doors);
+        renderKvCard(doorsCard.body, vehicle.doors, { emptyText: unavailableText("doors") });
         grid.appendChild(doorsCard.el);
 
         var windowsCard = card("Windows");
-        renderKvCard(windowsCard.body, vehicle.windows);
+        renderKvCard(windowsCard.body, vehicle.windows, { emptyText: unavailableText("windows") });
         grid.appendChild(windowsCard.el);
 
         // Wrapped in their own full-width sub-row so these three (all
@@ -1239,10 +1297,10 @@
         var statusRow = document.createElement("div");
         statusRow.className = "card-row";
         var tyresCard = card("Tyres");
-        renderKvCard(tyresCard.body, vehicle.tyres);
+        renderKvCard(tyresCard.body, vehicle.tyres, { emptyText: unavailableText("tyres") });
         statusRow.appendChild(tyresCard.el);
         var engineCard = card("Engine");
-        renderKvCard(engineCard.body, vehicle.engineStatus);
+        renderKvCard(engineCard.body, vehicle.engineStatus, { emptyText: unavailableText("engineStatus") });
         statusRow.appendChild(engineCard.el);
         var warningsCard = card("Warnings");
         renderWarnings(warningsCard.body, vehicle.warnings);
@@ -1252,7 +1310,8 @@
         var diagCard = card("Diagnostics & statistics");
         diagCard.el.classList.add("span-full");
         var merged = Object.assign({}, vehicle.diagnostics, vehicle.statistics, vehicle.brakes);
-        renderKvCard(diagCard.body, merged);
+        renderKvCard(diagCard.body, merged, { emptyText: unavailableText("diagnostics") || unavailableText("statistics") || unavailableText("brakes") });
+        appendResourceFailures(diagCard.body, ["diagnostics", "statistics", "brakes"]);
         grid.appendChild(diagCard.el);
 
         if (vehicle.unavailable && vehicle.unavailable.length) {
