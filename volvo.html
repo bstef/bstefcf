@@ -1048,16 +1048,29 @@
       container.appendChild(wrap);
     }
 
+    // Upstream error reasons (opts.emptyText, sourced from Volvo's API
+    // response) are attacker-influenceable text, not markup — built with
+    // textContent rather than innerHTML so a reason containing HTML can't
+    // execute in this origin, which holds the dashboard access token and
+    // can issue vehicle commands.
+    function renderEmptyNote(container, text) {
+      container.innerHTML = "";
+      var p = document.createElement("p");
+      p.className = "empty-note";
+      p.textContent = text;
+      container.appendChild(p);
+    }
+
     function renderKvCard(container, obj, opts) {
       opts = opts || {};
       container.innerHTML = "";
       if (!obj || typeof obj !== "object") {
-        container.innerHTML = '<p class="empty-note">' + (opts.emptyText || "No data reported for this vehicle.") + "</p>";
+        renderEmptyNote(container, opts.emptyText || "No data reported for this vehicle.");
         return;
       }
       var keys = Object.keys(obj).filter(function (k) { return !opts.skip || opts.skip.indexOf(k) === -1; });
       if (!keys.length) {
-        container.innerHTML = '<p class="empty-note">' + (opts.emptyText || "No data reported for this vehicle.") + "</p>";
+        renderEmptyNote(container, opts.emptyText || "No data reported for this vehicle.");
         return;
       }
       keys.forEach(function (key) {
@@ -1234,6 +1247,32 @@
           if (!u) return undefined;
           return "Couldn't load: " + (u.reason || "unknown error") + (u.status ? " (HTTP " + u.status + ")" : "");
         }
+        // For cards that merge multiple resources (Diagnostics & statistics
+        // merges diagnostics/statistics/brakes): renderKvCard's emptyText
+        // only shows when the merged object has zero keys, so a resource
+        // that failed alongside one that succeeded would otherwise vanish
+        // with no trace. Append an explicit failure row per failed resource
+        // instead, regardless of what else rendered.
+        function appendResourceFailures(container, keys) {
+          keys.forEach(function (key) {
+            var u = unavailableMap[key];
+            if (!u) return;
+            var row = document.createElement("div");
+            row.className = "kv-row";
+            var kSpan = document.createElement("span");
+            kSpan.className = "k";
+            kSpan.textContent = humanizeKey(key) + " unavailable";
+            var vSpan = document.createElement("span");
+            vSpan.className = "v";
+            var badge = document.createElement("span");
+            badge.className = "badge bad";
+            badge.textContent = (u.reason || "unknown error") + (u.status ? " (HTTP " + u.status + ")" : "");
+            vSpan.appendChild(badge);
+            row.appendChild(kSpan);
+            row.appendChild(vSpan);
+            container.appendChild(row);
+          });
+        }
 
         var grid = document.getElementById("overview-grid");
         grid.innerHTML = "";
@@ -1271,7 +1310,8 @@
         var diagCard = card("Diagnostics & statistics");
         diagCard.el.classList.add("span-full");
         var merged = Object.assign({}, vehicle.diagnostics, vehicle.statistics, vehicle.brakes);
-        renderKvCard(diagCard.body, merged, { emptyText: unavailableText("diagnostics") || unavailableText("statistics") });
+        renderKvCard(diagCard.body, merged, { emptyText: unavailableText("diagnostics") || unavailableText("statistics") || unavailableText("brakes") });
+        appendResourceFailures(diagCard.body, ["diagnostics", "statistics", "brakes"]);
         grid.appendChild(diagCard.el);
 
         if (vehicle.unavailable && vehicle.unavailable.length) {
