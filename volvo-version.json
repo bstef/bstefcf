@@ -1,7 +1,15 @@
 {
-  "version": "1.7.0",
-  "releasedAt": "2026-08-16",
+  "version": "1.8.0",
+  "releasedAt": "2026-08-19",
   "changelog": [
+    {
+      "version": "1.8.0",
+      "date": "2026-08-19",
+      "notes": [
+        "Background is now a subtle gradient instead of flat color, in both dark and light mode.",
+        "Added a font switcher (Sans, Serif, Rounded, Mono) that changes the whole dashboard's typeface on the fly and remembers your choice."
+      ]
+    },
     {
       "version": "1.7.0",
       "date": "2026-08-16",

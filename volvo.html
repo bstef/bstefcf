@@ -35,8 +35,15 @@
     --c5-bg: rgba(251,113,133,0.10); --c5-border: rgba(251,113,133,0.4);
     --c6-bg: rgba(74,222,128,0.10); --c6-border: rgba(74,222,128,0.4);
     --shadow: 0 18px 50px rgba(0,0,0,0.35);
-    --font: Inter, "SF Pro Display", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --font-sans: Inter, "SF Pro Display", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --font-serif: Georgia, "Iowan Old Style", "Palatino Linotype", "Times New Roman", serif;
+    --font-round: "Trebuchet MS", "Segoe UI Rounded", Verdana, sans-serif;
+    --font: var(--font-sans);
     --mono: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Consolas, monospace;
+    --bg-gradient:
+      radial-gradient(1100px 560px at 18% -8%, rgba(94,234,212,0.10), transparent 60%),
+      radial-gradient(900px 500px at 100% 0%, rgba(96,165,250,0.06), transparent 55%),
+      linear-gradient(180deg, #0d1219 0%, #0a0e14 45%, #070a10 100%);
   }
 
   html[data-theme="light"] {
@@ -61,6 +68,10 @@
     --c5-bg: rgba(190,18,60,0.08); --c5-border: rgba(190,18,60,0.35);
     --c6-bg: rgba(22,163,74,0.08); --c6-border: rgba(22,163,74,0.35);
     --shadow: 0 12px 34px rgba(15,23,42,0.1);
+    --bg-gradient:
+      radial-gradient(1100px 560px at 18% -8%, rgba(15,148,136,0.07), transparent 60%),
+      radial-gradient(900px 500px at 100% 0%, rgba(37,99,235,0.05), transparent 55%),
+      linear-gradient(180deg, #fbfcfe 0%, #f3f5f9 45%, #eef1f6 100%);
   }
 
   * { box-sizing: border-box; }
@@ -68,7 +79,8 @@
   body {
     margin: 0;
     min-height: 100vh;
-    background: var(--bg);
+    background: var(--bg-gradient);
+    background-attachment: fixed;
     color: var(--text);
     font-family: var(--font);
   }
@@ -121,6 +133,28 @@
   }
   .icon-btn:hover, .pill-btn:hover { border-color: var(--accent); }
   .icon-btn:disabled, .pill-btn:disabled { opacity: 0.5; cursor: wait; }
+
+  .font-switch {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    border: 1px solid var(--line);
+    background: var(--panel);
+    border-radius: 8px;
+    padding: 2px;
+  }
+  .font-opt {
+    font-size: 13px;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    border-radius: 6px;
+    padding: 7px 10px;
+    line-height: 1;
+  }
+  .font-opt:hover { color: var(--text); }
+  .font-opt.active { background: var(--panel-2); color: var(--text); }
 
   .status-dot {
     width: 8px; height: 8px; border-radius: 50%;
@@ -658,6 +692,12 @@
       </div>
       <div class="top-actions">
         <span class="status-dot" id="conn-dot"></span>
+        <div class="font-switch" role="group" aria-label="Font">
+          <button type="button" class="font-opt active" data-font-key="sans" style="font-family: var(--font-sans);" title="Sans-serif">Aa</button>
+          <button type="button" class="font-opt" data-font-key="serif" style="font-family: var(--font-serif);" title="Serif">Aa</button>
+          <button type="button" class="font-opt" data-font-key="round" style="font-family: var(--font-round);" title="Rounded">Aa</button>
+          <button type="button" class="font-opt" data-font-key="mono" style="font-family: var(--mono);" title="Monospace">Aa</button>
+        </div>
         <button class="icon-btn" id="unit-toggle" title="Toggle km/mi">km</button>
         <button class="icon-btn" id="theme-toggle" title="Toggle dark/light">🌙</button>
         <button class="icon-btn" id="refresh-btn" title="Refresh">⟳ Refresh</button>
@@ -831,12 +871,28 @@
     var state = {
       theme: localStorage.getItem("volvo-theme") || (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark"),
       unit: localStorage.getItem("volvo-unit") || "mi",
+      font: localStorage.getItem("volvo-font") || "sans",
       token: localStorage.getItem("volvo-dashboard-token") || "",
       map: null,
       liveMarker: null,
       routeLayer: null,
       selectedTripId: null
     };
+
+    var FONT_VARS = { sans: "var(--font-sans)", serif: "var(--font-serif)", round: "var(--font-round)", mono: "var(--mono)" };
+
+    function applyFont() {
+      document.documentElement.style.setProperty("--font", FONT_VARS[state.font] || FONT_VARS.sans);
+      document.querySelectorAll(".font-opt").forEach(function (b) {
+        b.classList.toggle("active", b.dataset.fontKey === state.font);
+      });
+    }
+
+    function setFont(key) {
+      state.font = key;
+      localStorage.setItem("volvo-font", key);
+      applyFont();
+    }
 
     function applyTheme() {
       document.documentElement.setAttribute("data-theme", state.theme);
@@ -1613,6 +1669,9 @@
     });
     document.getElementById("theme-toggle").addEventListener("click", toggleTheme);
     document.getElementById("unit-toggle").addEventListener("click", toggleUnit);
+    document.querySelectorAll(".font-opt").forEach(function (btn) {
+      btn.addEventListener("click", function () { setFont(btn.dataset.fontKey); });
+    });
     document.getElementById("refresh-btn").addEventListener("click", function () {
       loadOverview();
       loadTrips();
@@ -1674,6 +1733,7 @@
 
     applyTheme();
     applyUnit();
+    applyFont();
     if (state.token) {
       document.getElementById("auth-overlay").classList.add("hidden");
       startApp();
