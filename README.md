@@ -1,102 +1,170 @@
 # bstefcf
 
-Static pages hosted on Cloudflare Pages — a landing page plus whatever experiments and artifacts I drop in over time.
+Personal dashboards, utilities, and experiments hosted on Cloudflare Pages.
 
 🔗 **Live:** [bstef.pages.dev](https://bstef.pages.dev)
 
+> This repository may be kept **private**. Cloudflare Pages can deploy a private GitHub repository as long as the Cloudflare GitHub App remains authorized for the repo.
+
 ## What's here
 
-This repo is deployed automatically to Cloudflare Pages on every push to `main`. There's no build step — it's just plain HTML files served as-is.
+Cloudflare Pages deploys this repository automatically from `main`. There is no frontend build step: the site is primarily plain HTML/CSS/JavaScript plus Cloudflare Pages Functions under `functions/`.
 
 | Path | Description |
 | --- | --- |
-| `index.html` | Landing page |
-| `perodic.html` | interactive periodic table |
-| `qr.html` | QR Code Generator |
-| `whois.html` | Domain & IP whois lookup |
+| `index.html` | Landing page / app launcher |
+| `perodic.html` | Interactive periodic table |
+| `qr.html` | QR code generator |
+| `whois.html` | Domain & IP WHOIS lookup |
 | `fork-sync.html` | GitHub fork sync status report |
-| `cloudflare.html` | Cloudflare traffic/cache/error dashboard, aggregated across all domains on the account |
-| `volvo.html` | Volvo car dashboard — status, remote controls, trip log & map, fuel tracking, software/app updates |
+| `cloudflare.html` | Cloudflare traffic/cache/error dashboard |
+| `volvo.html` | Volvo dashboard — vehicle status, controls, trips, map, fuel tracking and updates |
+| `home-value.html` | Private Home Value Tracker — family properties, valuations, rent data, taxes and value-history charts |
 
 ## Adding a new page
 
-1. Drop a new `.html` file anywhere in the repo (root or a subfolder).
-2. Add an entry to the `SITE_APPS` array in `site-nav.js` (path, icon, name, description).
-3. Commit and push to `main`.
-4. Cloudflare Pages auto-deploys the change — it'll be live at `bstef.pages.dev/<filename>` within a minute or two.
+1. Add the new `.html` file to the repo.
+2. Add one entry to `SITE_APPS` in `site-nav.js`.
+3. Commit/push to `main`.
+4. Cloudflare Pages deploys the change automatically.
 
-Step 2 is what makes the new page show up as a card on the index and as a nav link in every other page's footer — see below.
+`SITE_APPS` is the shared source of truth for the homepage cards and footer navigation, so a single entry keeps navigation in sync across the site.
 
 ## Shared navigation
 
-`site-nav.js` + `site-nav.css` are the single source of truth for site-wide navigation. `SITE_APPS` in `site-nav.js` lists every app; the script renders it into whichever of these mount points a page includes:
+`site-nav.js` + `site-nav.css` provide the shared navigation system.
 
 | Mount point | Renders |
 | --- | --- |
-| `<div class="grid" id="app-grid"></div>` | index.html's card grid |
-| `<div id="site-back"></div>` | "&larr; back to bstef.pages.dev" link (skipped on the index itself) |
-| `<div id="site-footer"></div>` | nav links to every other app, plus bstef.com/source links |
+| `<div class="grid" id="app-grid"></div>` | Cards on `index.html` |
+| `<div id="site-back"></div>` | Back-to-home link on app pages |
+| `<div id="site-footer"></div>` | Links to the other apps plus site/source links |
 
-Because every page pulls from the same `SITE_APPS` array, adding one entry keeps the index cards, every footer, and the favicon-matching icons all in sync — no per-page edits needed. Page-specific footer content (e.g. qr.html's privacy note, fork-sync.html's scheduled-task blurb) stays separate and is rendered alongside `#site-footer`, not replaced by it.
+## Home Value Tracker
+
+`home-value.html` is a personal real-estate dashboard for a small set of family properties. The current UI includes:
+
+- Portfolio overview with five tracked properties
+- Separate tabs for each property
+- Current valuation and valuation range
+- Bedrooms, bathrooms, living area, year built, assessment and other property facts
+- Property tax / parcel information where available
+- Rental-estimate fields, including support for Zillow and planned RentCast data
+- Value-history charts per property
+- Source separation so Zillow, Redfin, Realtor and RentCast values are not silently blended
+- Image slots intended for exact-property listing images or exact-address Street View fallbacks
+
+### Home Value Tracker access control
+
+Because the dashboard contains residential addresses, `/home-value.html` is protected by a Pages middleware gate in `functions/_middleware.js`.
+
+The login form posts to `functions/api/home-auth.js` and uses the existing Cloudflare Pages secret:
+
+- `DASHBOARD_TOKEN`
+
+A successful login creates an `HttpOnly`, `Secure`, `SameSite=Strict` cookie. The protected response is also marked `private, no-store` and `noindex, nofollow, noarchive`.
+
+The token is **not embedded in the HTML or committed to GitHub**. Keeping this repository private is additionally recommended because the property dataset currently lives in `home-value.html` itself.
+
+This is intentionally a lightweight shared-secret gate. Cloudflare Access / Zero Trust remains the stronger option if identity-based access is desired later.
 
 ## Cloudflare dashboard backend
 
-`cloudflare.html` is powered by Pages Functions in `functions/`:
+`cloudflare.html` uses Pages Functions in `functions/`:
 
 | Path | Description |
 | --- | --- |
-| `functions/api/analytics.js` | Queries Cloudflare's GraphQL Analytics API and aggregates traffic across zones |
-| `functions/api/zones.js` | Lists the account's zones for the domain picker |
-| `functions/_shared/cf.js` | Shared GraphQL/REST helpers used by both endpoints |
+| `functions/api/analytics.js` | Queries Cloudflare GraphQL Analytics and aggregates traffic |
+| `functions/api/zones.js` | Lists account zones for the domain picker |
+| `functions/_shared/cf.js` | Shared Cloudflare GraphQL/REST helpers |
 
-Requires a `CLOUDFLARE_API_TOKEN` secret (scoped to `Zone → Analytics → Read` and `Zone → Zone → Read`, all zones) set as a Pages environment variable — see `functions/api/analytics.js` for details.
+Required Pages secret:
+
+- `CLOUDFLARE_API_TOKEN`
 
 ## Volvo dashboard backend
 
-`volvo.html` talks to Volvo's official [Connected Vehicle / Location / Energy APIs](https://developer.volvocars.com) through Pages Functions in `functions/api/volvo/`:
+`volvo.html` talks to Volvo's official Connected Vehicle, Location and Energy APIs through Pages Functions in `functions/api/volvo/`.
 
 | Path | Description |
 | --- | --- |
-| `functions/api/volvo/vehicle.js` | Aggregates doors, windows, odometer, tyres, warnings, diagnostics, statistics, engine status, fuel, brakes, energy |
+| `functions/api/volvo/vehicle.js` | Aggregates vehicle state and diagnostics |
 | `functions/api/volvo/location.js` | Current vehicle location |
-| `functions/api/volvo/commands.js` | Lists the remote commands this vehicle supports |
-| `functions/api/volvo/command.js` | Executes a remote command (lock, unlock, climatization, flash, honk, engine start/stop) |
-| `functions/api/volvo/trips.js` | Trip list / single trip detail, read from D1 |
-| `functions/api/volvo/poll.js` | Polling target — logs a location ping and runs the trip start/continue/close state machine |
-| `functions/api/volvo/updates.js` | Best-effort car software info + this dashboard's own version/changelog |
-| `functions/api/volvo/fuel.js` | Fill-up log: list with derived MPG/cost stats (GET), add a fill-up (POST), delete one (DELETE) |
-| `functions/api/volvo/fuel-import.js` | One-time CSV import (Fuelly export or similar) to backfill fuel history |
-| `functions/api/volvo/oauth-setup.js` | One-time OAuth helper backing `volvo-setup.html` — hands back the authorize URL, then exchanges a code for tokens |
-| `functions/_shared/volvo.js` | OAuth token refresh (persisted in D1, single-flight to survive concurrent requests), the authenticated fetch wrapper, and the dashboard access-code check |
+| `functions/api/volvo/commands.js` | Supported remote commands |
+| `functions/api/volvo/command.js` | Executes remote commands |
+| `functions/api/volvo/trips.js` | Trip list/detail from D1 |
+| `functions/api/volvo/poll.js` | Saves location samples and derives trip state |
+| `functions/api/volvo/updates.js` | Software/app update information |
+| `functions/api/volvo/fuel.js` | Fuel log and calculated fuel stats |
+| `functions/api/volvo/fuel-import.js` | CSV fuel-history importer |
+| `functions/api/volvo/oauth-setup.js` | OAuth setup helper |
+| `functions/_shared/volvo.js` | Shared auth, Volvo API and token-refresh helpers |
 
-Volvo's public API only reports a vehicle's *current* location, not a trip history, so this dashboard builds its own trip log: a scheduled job hits `/api/volvo/poll` every few minutes, and that endpoint derives trips from consecutive location pings stored in D1 (see `schema/volvo.sql`).
+### Why there is a GitHub Action
 
-### Access control
+Volvo's public API exposes the vehicle's **current location**, but does not provide a complete historical trip log. The dashboard therefore creates its own trip history by periodically sampling the vehicle location and storing those samples in D1.
 
-Every route under `/api/volvo/` except `poll.js` (which uses its own `POLL_SECRET` for the unattended cron caller) requires a `DASHBOARD_TOKEN` shared secret, sent as `Authorization: Bearer <token>`. `volvo.html` prompts for it once and caches it in `localStorage`. This exists because the API endpoints — including the ones that send lock/unlock/climatization/engine commands — would otherwise be reachable by anyone who found the public Pages URL.
+`.github/workflows/volvo-poll.yml` is the scheduler. Every five minutes it calls:
 
-That said, an app-level shared secret is a minimum bar, not real authentication. For meaningful protection, put **Cloudflare Access** (Zero Trust) in front of `/volvo.html` and `/api/volvo/*`, gated to your own email/identity — that's a Cloudflare dashboard policy, not a code change, so it isn't set up by this PR. Treat `DASHBOARD_TOKEN` as defense-in-depth underneath it, not a replacement for it.
+`POST /api/volvo/poll`
 
-### Fuel tracking
+with a dedicated bearer secret. `poll.js` then fetches the current vehicle location and updates the trip start/continue/close state machine.
 
-There's no public Fuelly API (confirmed via their forums — developers have asked for years), so `/api/volvo/fuel` is a self-hosted fill-up log instead: log gallons/price/odometer/station from the Fuel tab, and MPG is derived server-side using the standard full-to-full method (gallons accumulate across any partial fills until the next full fill closes the interval). To bring in existing history, export your Fuelly log as CSV (vehicle page → *Export Fuel-ups* → *All Fuelups*) and upload it via the Fuel tab's importer — `fuel-import.js` matches common column-name variants rather than a fixed header list, since exporter formats vary. New fill-ups after that are logged natively.
+### GitHub Action configuration
 
-### One-time setup
+The workflow needs two **GitHub Actions repository secrets**:
 
-Do these in order — each step after the first depends on the one before it.
+- `VOLVO_POLL_URL` — normally `https://bstef.pages.dev/api/volvo/poll`
+- `VOLVO_POLL_SECRET` — must match the Cloudflare Pages `POLL_SECRET`
 
-1. **Register an app** at [developer.volvocars.com](https://developer.volvocars.com) and subscribe it to the Connected Vehicle, Location, and (if applicable) Energy APIs. The app page gives you a `client_id`, `client_secret`, and a VCC API key. Also note your vehicle's VIN (from the car's registration/VIN plate, or the Volvo app).
-2. **Set the secrets you have so far** in the Cloudflare Pages dashboard (Settings → Environment variables — this repo has no `wrangler.toml`, so all bindings/secrets live there, same as `CLOUDFLARE_API_TOKEN` for `cloudflare.html`): `VOLVO_CLIENT_ID`, `VOLVO_CLIENT_SECRET`, `VOLVO_API_KEY`, `VOLVO_VIN`, and `DASHBOARD_TOKEN` (any random string — this is what you'll type into the dashboard's login prompt, not something Volvo gives you). Redeploy after adding them so the Functions can see them.
-3. **Create the D1 database**: `wrangler d1 create bstefcf-volvo`, bind it from the Pages dashboard (Settings → Functions → D1 database bindings → variable name `VOLVO_DB`), then apply the schema: `wrangler d1 execute bstefcf-volvo --remote --file=schema/volvo.sql`.
-4. **Get a refresh token** by visiting `/volvo-setup.html` on your deployed site (log in with `DASHBOARD_TOKEN` from step 2) — it walks through registering a redirect URI, picking scopes, and running the OAuth authorization-code + PKCE flow, then hands you a `refresh_token` (and saves it straight to D1 if that's already set up, so step 3 first saves you a manual copy-paste). If you do it before D1 exists, paste the returned value into a `VOLVO_REFRESH_TOKEN` secret instead — it's only used to bootstrap the very first exchange; D1 takes over from there.
-5. **Schedule the poller**: Cloudflare Pages Functions don't support Cron Triggers directly, so `.github/workflows/volvo-poll.yml` calls `/api/volvo/poll` on a schedule instead. Set the repo secrets `VOLVO_POLL_URL` (e.g. `https://bstef.pages.dev/api/volvo/poll`) and `VOLVO_POLL_SECRET` (matching a `POLL_SECRET` Pages secret you also set).
-6. **(Recommended)** Add a Cloudflare Access policy in front of `/volvo.html`, `/volvo-setup.html`, and `/api/volvo/*` for real caller authentication — see "Access control" above.
+Previously the workflow intentionally exited with an error when either secret was missing, which caused repeated red/failing scheduled runs. It now **skips successfully with a notice when polling is not configured**.
+
+To enable trip polling, set both GitHub repository secrets and make sure Cloudflare Pages also has the matching `POLL_SECRET`.
+
+### Volvo access control
+
+User-facing routes under `/api/volvo/` use `DASHBOARD_TOKEN` as a bearer token. The unattended poll endpoint uses its separate `POLL_SECRET`.
+
+The shared-secret model is a minimum protection layer. Cloudflare Access is recommended if the Volvo dashboard and APIs need identity-based protection.
+
+### Volvo setup summary
+
+Cloudflare Pages environment/bindings used by the Volvo dashboard include:
+
+- `VOLVO_CLIENT_ID`
+- `VOLVO_CLIENT_SECRET`
+- `VOLVO_API_KEY`
+- `VOLVO_VIN`
+- `DASHBOARD_TOKEN`
+- `POLL_SECRET` (when scheduled trip polling is enabled)
+- `VOLVO_DB` D1 binding
+- Optional bootstrap `VOLVO_REFRESH_TOKEN`
+
+GitHub Actions secrets used for trip polling:
+
+- `VOLVO_POLL_URL`
+- `VOLVO_POLL_SECRET`
+
+## Private-repository notes
+
+The site can continue deploying from a private GitHub repository. After changing repository visibility:
+
+1. Confirm the Cloudflare Pages project still shows `bstef/bstefcf` as its connected Git repository.
+2. Confirm the Cloudflare GitHub App has access to the private repo.
+3. Make a small commit to `main` and verify a Pages deployment starts.
+4. GitHub Actions continue to work in private repositories, but hosted-runner usage is subject to the account's private-repo Actions allowance.
+
+The deployed Pages site is still publicly reachable unless individual routes are protected. Repository privacy hides the source; it does **not** automatically make `bstef.pages.dev` private.
 
 ## Stack
 
 - **Hosting:** Cloudflare Pages
-- **Deploys:** GitHub → Cloudflare (auto, on push)
-- **Build:** none — static files only, plus a couple of Pages Functions for the Cloudflare dashboard's backend
+- **Source:** GitHub (`main`)
+- **Frontend:** HTML / CSS / JavaScript
+- **Backend:** Cloudflare Pages Functions
+- **Database:** Cloudflare D1 where needed
+- **Scheduled Volvo polling:** GitHub Actions
+- **Authentication:** Lightweight shared-secret gates, with Cloudflare Access recommended for stronger identity-based protection
 
 ---
 Part of the [bstef.com](https://bstef.com) / [peacock.computer](https://peacock.computer) network.
