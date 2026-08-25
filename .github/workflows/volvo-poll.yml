@@ -2,9 +2,9 @@ name: Volvo trip poll
 
 on:
   schedule:
-    # Cloudflare Pages has no built-in cron for Pages Functions, so this
-    # workflow is the scheduler: it just pings our own /api/volvo/poll
-    # endpoint, which does the actual location fetch + trip bookkeeping.
+    # Volvo's public API exposes current location, not trip history.
+    # This workflow periodically calls our Pages Function so the app can
+    # build trip history from consecutive location samples stored in D1.
     - cron: "*/5 * * * *"
   workflow_dispatch: {}
 
@@ -18,9 +18,10 @@ jobs:
           POLL_SECRET: ${{ secrets.VOLVO_POLL_SECRET }}
         run: |
           if [ -z "$POLL_URL" ] || [ -z "$POLL_SECRET" ]; then
-            echo "Set the VOLVO_POLL_URL and VOLVO_POLL_SECRET repo secrets first (see README)." >&2
-            exit 1
+            echo "::notice::Volvo trip polling is not configured. Set VOLVO_POLL_URL and VOLVO_POLL_SECRET repo secrets to enable it."
+            exit 0
           fi
+
           curl -sS -f -X POST "$POLL_URL" \
             -H "authorization: Bearer $POLL_SECRET" \
             -H "content-length: 0"
