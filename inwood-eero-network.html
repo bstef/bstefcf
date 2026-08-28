@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#128225;</text></svg>">
+<link rel="stylesheet" href="/site-nav.css">
+<title>Inwood Eero Network</title>
+<style>
+  :root{
+    --bg:#0d1117;
+    --panel:#141b23;
+    --panel-line:#233040;
+    --ink:#dbe4ec;
+    --ink-dim:#7c8a99;
+    --amber:#e8a33d;
+    --teal:#3ecfb2;
+    --violet:#a684e8;
+    --red:#e0644f;
+    --green:#4caf7d;
+    --mono: 'IBM Plex Mono', 'SFMono-Regular', Consolas, monospace;
+    --sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:var(--sans);}
+
+  /* ---------- shared nav chrome (site-nav.js/css) ---------- */
+  #site-back{max-width:1180px;margin:0 auto;padding:18px 28px 0;}
+  #site-footer{max-width:1180px;margin:0 auto;}
+  .brand{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-weight:600;letter-spacing:.5px;}
+  .brand .dot{width:9px;height:9px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 2.4s infinite;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.35;}}
+  .brand small{color:var(--ink-dim);font-weight:400;margin-left:6px;font-family:var(--sans);}
+
+  /* light-theme overrides for shared site-nav chrome, matching other pages in the repo */
+  html[data-theme="light"] #site-back a,
+  html[data-theme="light"] .site-footer-nav a,
+  html[data-theme="light"] .site-footer-meta a{
+    color:rgba(15,23,42,0.55);border-color:rgba(15,23,42,0.15);
+  }
+  html[data-theme="light"] #site-back a:hover,
+  html[data-theme="light"] .site-footer-nav a:hover,
+  html[data-theme="light"] .site-footer-meta a:hover{
+    color:rgba(15,23,42,0.95);border-color:rgba(15,23,42,0.5);
+  }
+  html[data-theme="light"] #site-footer{border-color:rgba(15,23,42,0.1);color:rgba(15,23,42,0.5);}
+
+  /* ---------- HERO ---------- */
+  header.hero{padding:52px 28px 20px;max-width:1180px;margin:0 auto;}
+  .eyebrow{
+    font-family:var(--mono);font-size:12px;color:var(--teal);letter-spacing:2px;text-transform:uppercase;
+    display:flex;align-items:center;gap:8px;margin-bottom:14px;
+  }
+  .eyebrow::before{content:'';width:24px;height:1px;background:var(--teal);}
+  h1{font-size:clamp(28px,4vw,42px);margin:0 0 10px;font-weight:700;letter-spacing:-0.5px;}
+  h1 span{color:var(--amber);}
+  .sub{color:var(--ink-dim);max-width:620px;line-height:1.6;font-size:15px;margin-bottom:26px;}
+  .statline{display:flex;gap:22px;flex-wrap:wrap;font-family:var(--mono);font-size:12.5px;color:var(--ink-dim);margin-bottom:8px;}
+  .statline b{color:var(--ink);font-weight:600;}
+  .netstat{
+    display:flex;align-items:center;gap:10px;margin-top:14px;padding:9px 14px;
+    background:var(--panel);border:1px solid var(--panel-line);border-radius:8px;
+    font-family:var(--mono);font-size:12.5px;color:var(--ink-dim);width:fit-content;
+  }
+  .netstat b{color:var(--ink);}
+  .netstat .netstat-sep{color:var(--panel-line);}
+  .netstat .dot-live{width:8px;height:8px;border-radius:50%;background:#3b4552;flex-shrink:0;}
+  .netstat .dot-live.ok{background:var(--green);box-shadow:0 0 6px var(--green);}
+  .netstat .dot-live.changed{background:var(--amber);box-shadow:0 0 6px var(--amber);animation:pulse 1.4s infinite;}
+  .netstat .dot-live.err{background:var(--red);}
+  #pub-ip-refresh{
+    background:none;border:1px solid var(--panel-line);color:var(--ink-dim);border-radius:5px;
+    width:22px;height:22px;cursor:pointer;font-size:13px;line-height:1;margin-left:2px;
+  }
+  #pub-ip-refresh:hover{color:var(--teal);border-color:var(--teal);}
+  .ip-input{
+    background:#0d1117;border:1px solid var(--panel-line);color:var(--ink);
+    font-family:var(--mono);font-size:12.5px;border-radius:5px;padding:5px 8px;width:150px;
+  }
+  .ip-input:focus{outline:none;border-color:var(--teal);}
+  .ip-saved-note{color:var(--ink-dim);font-size:10.5px;font-style:italic;margin-left:8px;}
+  .rack-item .ip{color:var(--ink-dim);font-family:var(--mono);font-size:11px;margin-left:8px;}
+
+  .legend{display:flex;gap:18px;flex-wrap:wrap;margin-top:20px;font-family:var(--mono);font-size:12px;color:var(--ink-dim);}
+  .legend .swatch{display:inline-flex;align-items:center;gap:7px;}
+  .legend .ln{width:22px;height:0;border-top:3px solid;}
+  .legend .ln.eth{border-color:#5a7891;border-top-style:solid;}
+  .legend .ln.mesh{border-color:var(--violet);border-top-style:dashed;}
+  .legend .ln.empty{border-color:#3b4552;border-top-style:dashed;}
+
+  /* ---------- MAIN LAYOUT ---------- */
+  main{max-width:1180px;margin:0 auto;padding:10px 28px 80px;}
+  .stage-wrap{
+    background:var(--panel);border:1px solid var(--panel-line);border-radius:14px;
+    padding:26px 18px 34px;position:relative;overflow-x:auto;
+  }
+  .stage-wrap .hint{
+    position:absolute;top:14px;right:18px;font-family:var(--mono);font-size:11px;color:var(--ink-dim);
+    display:flex;align-items:center;gap:6px;
+  }
+  .stage-wrap .hint svg{width:13px;height:13px;fill:var(--ink-dim);}
+
+  .export-bar{
+    position:absolute;top:14px;left:18px;z-index:2;
+    display:flex;align-items:center;gap:8px;
+  }
+  .export-btn{
+    display:flex;align-items:center;gap:6px;
+    background:#0d1117;border:1px solid var(--panel-line);color:var(--ink-dim);
+    font-family:var(--mono);font-size:11.5px;border-radius:6px;padding:6px 11px;
+    cursor:pointer;transition:.15s;
+  }
+  .export-btn svg{width:12px;height:12px;fill:currentColor;}
+  .export-btn:hover{color:var(--teal);border-color:var(--teal);}
+  .export-btn:disabled{opacity:.5;cursor:wait;}
+  .export-status{font-family:var(--mono);font-size:11px;color:var(--ink-dim);}
+
+  svg#topo{width:100%;min-width:960px;height:auto;display:block;}
+
+  .node-rect{
+    fill:var(--panel);stroke:#3b4552;stroke-width:1.4;rx:10;
+    cursor:pointer;transition:stroke .15s, filter .15s;
+  }
+  .node-group:hover .node-rect{stroke:var(--teal);filter:drop-shadow(0 0 6px rgba(62,207,178,.35));}
+  .node-group.selected .node-rect{stroke:var(--amber);stroke-width:2;filter:drop-shadow(0 0 10px rgba(232,163,61,.4));}
+  .node-title{fill:var(--ink);font-family:var(--mono);font-weight:700;font-size:12.5px;}
+  .node-sub{fill:var(--ink-dim);font-family:var(--mono);font-size:10.5px;}
+  .node-badge{font-family:var(--mono);font-size:9px;fill:#0d1117;font-weight:700;}
+  .badge-bg{rx:4;}
+
+  .isp .node-rect{stroke:#5a6b7a;}
+  .gw .node-rect{stroke:var(--amber);}
+  .mesh .node-rect{stroke:var(--violet);}
+  .sw .node-rect{stroke:var(--teal);}
+  .host .node-rect{stroke:#3b4552;}
+  .warn .node-rect{stroke:var(--red);}
+
+  .edge{fill:none;stroke:#5a7891;stroke-width:2;}
+  .edge.mesh-link{stroke:var(--violet);stroke-width:2.2;stroke-dasharray:6 5;}
+  .edge.empty-link{stroke:#3b4552;stroke-width:1.6;stroke-dasharray:3 5;}
+  .edge.disconnected{stroke:var(--red);stroke-width:2;stroke-dasharray:5 4;}
+  .edge-label{fill:var(--ink-dim);font-family:var(--mono);font-size:9.5px;}
+
+  .port-pill{fill:#0d1117;stroke:#2a3542;stroke-width:1;rx:6;cursor:pointer;transition:.15s;}
+  .port-pill:hover{stroke:var(--teal);}
+  .port-pill.selected{stroke:var(--amber);stroke-width:1.6;}
+  .port-pill.empty{stroke-dasharray:3 3;}
+  .port-pill.disc{stroke:var(--red);}
+  .port-label{fill:var(--ink);font-family:var(--mono);font-size:10px;}
+  .port-sub{fill:var(--ink-dim);font-family:var(--mono);font-size:9px;}
+
+  /* ---------- DETAIL PANEL ---------- */
+  .grid-below{display:grid;grid-template-columns:1.1fr 1fr;gap:20px;margin-top:22px;}
+  @media (max-width:860px){.grid-below{grid-template-columns:1fr;}}
+
+  .card{background:var(--panel);border:1px solid var(--panel-line);border-radius:14px;padding:22px 24px;}
+  .card h2{margin:0 0 4px;font-size:14px;font-family:var(--mono);letter-spacing:.5px;color:var(--ink-dim);text-transform:uppercase;}
+  .card h2 span.count{color:var(--teal);}
+
+  #detail .empty-state{color:var(--ink-dim);font-size:13.5px;line-height:1.7;padding:10px 2px;}
+  #detail .dtitle{font-size:19px;font-weight:700;margin:10px 0 4px;color:var(--ink);}
+  #detail .dkind{font-family:var(--mono);font-size:11px;color:var(--amber);letter-spacing:1px;text-transform:uppercase;margin-bottom:14px;display:inline-block;}
+  #detail dl{display:grid;grid-template-columns:110px 1fr;gap:9px 14px;font-size:13.5px;margin-top:8px;}
+  #detail dt{color:var(--ink-dim);font-family:var(--mono);font-size:11.5px;}
+  #detail dd{margin:0;color:var(--ink);}
+  #detail dd.tbd{color:var(--ink-dim);font-style:italic;}
+  .tag{display:inline-block;font-family:var(--mono);font-size:10.5px;padding:2px 8px;border-radius:20px;border:1px solid var(--panel-line);color:var(--ink-dim);margin:2px 4px 2px 0;}
+  .tag.online{border-color:var(--green);color:var(--green);}
+  .tag.disc{border-color:var(--red);color:var(--red);}
+
+  /* rack listing */
+  .rack-item{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:10px 4px;border-bottom:1px solid var(--panel-line);font-size:13px;cursor:pointer;
+    transition:.15s;
+  }
+  .rack-item:last-child{border-bottom:none;}
+  .rack-item:hover{background:#1a222c;}
+  .rack-item .l{display:flex;align-items:center;gap:10px;}
+  .rack-item .led{width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0;}
+  .rack-item .led.off{background:#3b4552;}
+  .rack-item .led.warn{background:var(--red);}
+  .rack-item .name{color:var(--ink);font-family:var(--mono);font-size:12.5px;}
+  .rack-item .meta{color:var(--ink-dim);font-size:11.5px;}
+
+  footer{max-width:1180px;margin:0 auto;padding:0 28px 50px;color:var(--ink-dim);font-family:var(--mono);font-size:11.5px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+  footer a{color:var(--ink-dim);}
+
+  ::-webkit-scrollbar{height:8px;}
+  ::-webkit-scrollbar-thumb{background:#2a3542;border-radius:4px;}
+</style>
+</head>
+<body>
+
+<div id="site-back"></div>
+
+<header class="hero">
+  <div class="brand" style="margin-bottom:18px;"><span class="dot"></span>INWOOD<small>&nbsp;/ eero network</small></div>
+  <div class="eyebrow">Cloudflare Pages App · Live Topology Reference</div>
+  <h1>Inwood <span>Eero</span> Network</h1>
+  <p class="sub">Physical wiring map of the Little Falls household network — from ISP hand-off through the living-room eero 7 gateway, the basement mesh node, and every managed switch port in between. Click any node or port for details.</p>
+  <div class="statline">
+    <span>ISP: <b>Optimum</b></span>
+    <span><b>2</b> eero units</span>
+    <span><b>2</b> managed switches</span>
+    <span><b>14</b> wired ports mapped</span>
+    <span><b>1</b> wireless backhaul hop</span>
+    <span style="color:var(--red)">● 1 port flagged (Sonos Beam, disconnected)</span>
+  </div>
+  <div class="netstat" id="netstat">
+    <span class="dot-live" id="pub-ip-dot"></span>
+    <span>Public IP: <b id="pub-ip-value">checking…</b></span>
+    <span class="netstat-sep">·</span>
+    <span id="pub-ip-meta">not checked yet</span>
+    <button id="pub-ip-refresh" title="Check now">↻</button>
+  </div>
+  <div class="legend">
+    <span class="swatch"><span class="ln eth"></span> Ethernet</span>
+    <span class="swatch"><span class="ln mesh"></span> Wireless mesh / backhaul</span>
+    <span class="swatch"><span class="ln empty"></span> Empty / unused port</span>
+  </div>
+</header>
+
+<main>
+  <div class="stage-wrap">
+    <div class="export-bar">
+      <button id="export-png-btn" class="export-btn"><svg viewBox="0 0 16 16"><path d="M8 1a.5.5 0 0 1 .5.5v7.79l2.15-2.15a.5.5 0 1 1 .7.71l-3 3a.5.5 0 0 1-.7 0l-3-3a.5.5 0 1 1 .7-.71L7.5 9.29V1.5A.5.5 0 0 1 8 1zM3 13a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9A.5.5 0 0 1 3 13z"/></svg> PNG</button>
+      <button id="export-pdf-btn" class="export-btn"><svg viewBox="0 0 16 16"><path d="M8 1a.5.5 0 0 1 .5.5v7.79l2.15-2.15a.5.5 0 1 1 .7.71l-3 3a.5.5 0 0 1-.7 0l-3-3a.5.5 0 1 1 .7-.71L7.5 9.29V1.5A.5.5 0 0 1 8 1zM3 13a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9A.5.5 0 0 1 3 13z"/></svg> PDF</button>
+      <span class="export-status" id="export-status"></span>
+    </div>
+    <div class="hint"><svg viewBox="0 0 16 16"><path d="M8 3a5 5 0 1 0 0 10A5 5 0 0 0 8 3zm0-2a7 7 0 1 1 0 14A7 7 0 0 1 8 1zm-.75 4.5h1.5v1.5h-1.5V5.5zm0 3h1.5V11h-1.5V8.5z"/></svg> click a node</div>
+    <svg id="topo" viewBox="0 0 1400 900" xmlns="http://www.w3.org/2000/svg"></svg>
+  </div>
+
+  <div class="grid-below">
+    <div class="card" id="detail-card">
+      <h2>Selected device</h2>
+      <div id="detail">
+        <div class="empty-state">Nothing selected yet. Click any box or port pill above — the gateway, a switch, a game console, whatever — to see what's known about it, including gaps still worth filling in for eero/ISP support.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Full device rack <span class="count">(14)</span></h2>
+      <div id="rack-list"></div>
+    </div>
+  </div>
+</main>
+
+<div id="site-footer"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="/site-nav.js" defer></script>
+<script>
+/* ---------------------------------------------------------
+   DATA MODEL
+--------------------------------------------------------- */
+const NODES = {
+  isp: {
+    x:560,y:20,w:230,h:60,kind:'isp',cls:'isp',
+    title:'Internet / ISP', sub:'Optimum',
+    detail:{
+      ISP:'Optimum', Type:'ISP service hand-off', Model:'—',
+      Notes:'Entry point to the home. No modem make/model recorded yet.'
+    }
+  },
+  modem: {
+    x:545,y:120,w:260,h:70,kind:'modem',cls:'isp',
+    title:'ISP Modem / Router', sub:'make & model: TBD',
+    detail:{
+      Role:'Modem/router provided by ISP', Model:'Not yet recorded',
+      Uplink:'1 Ethernet connection in use → eero 7 gateway',
+      'Still needed':'Exact make/model for eero + ISP support tickets'
+    }
+  },
+  gw: {
+    x:530,y:245,w:290,h:90,kind:'gw',cls:'gw',
+    title:'Living Room — eero 7 Gateway', sub:'primary router',
+    detail:{
+      Role:'eero 7, primary gateway / router',
+      'Port A':'Ethernet uplink → ISP modem',
+      'Port B':'Ethernet downlink → Netgear 8-port switch',
+      Backhaul:'Wireless mesh to basement eero Pro',
+      Note:'No double-uplink between modem and switch — single path in, single path out.'
+    }
+  },
+  sw1: {
+    x:200,y:400,w:340,h:100,kind:'sw',cls:'sw',
+    title:'Living Room — Netgear 8-Port Switch', sub:'model: TBD',
+    detail:{
+      Role:'Unmanaged/managed 8-port gigabit switch (model TBD)',
+      Uplink:'Port 1 → eero 7 gateway',
+      Populated:'Ports 4–8 (see rack list)',
+      Empty:'Ports 2–3',
+      'Still needed':'Exact model number for eero support ticket'
+    }
+  },
+  mesh: {
+    x:960,y:400,w:340,h:110,kind:'mesh',cls:'mesh',
+    title:'Basement — eero Pro Mesh Node', sub:'generation/model: TBD',
+    detail:{
+      Role:'eero Pro mesh extender, wireless backhaul to gateway',
+      'Port 1':'Ethernet → TP-Link 8-port switch',
+      'Port 2':'Direct Ethernet → Windows PC',
+      Backhaul:'Wireless mesh to living-room eero 7',
+      'Still needed':'Exact eero Pro generation/model for support ticket'
+    }
+  },
+  sw2: {
+    x:960,y:570,w:340,h:100,kind:'sw',cls:'sw',
+    title:'Basement — TP-Link 8-Port Easy Smart Switch', sub:'model: TBD',
+    detail:{
+      Role:'TP-Link 8-port Gigabit Easy Smart switch (model TBD)',
+      Uplink:'Port 1 → basement eero Pro node',
+      Populated:'Port 2 (Mac mini), Port 3 (Proxmox host)',
+      Empty:'Ports 4–8, no connected devices reported',
+      'Still needed':'Exact model number for eero support ticket'
+    }
+  }
+};
+
+// Ports hanging off sw1 (Netgear, living room)
+const SW1_PORTS = [
+  {id:'p1', label:'Port 1', sub:'Uplink → eero 7 gateway', x:0, status:'uplink'},
+  {id:'p2', label:'Port 2', sub:'Empty', x:1, status:'empty'},
+  {id:'p3', label:'Port 3', sub:'Empty', x:2, status:'empty'},
+  {id:'p4', label:'Port 4', sub:'Xbox Series X', x:3, status:'on'},
+  {id:'p5', label:'Port 5', sub:'Apple TV 4K', x:4, status:'on'},
+  {id:'p6', label:'Port 6', sub:'LG Smart TV', x:5, status:'on'},
+  {id:'p7', label:'Port 7', sub:'Sonos Beam — disconnected', x:6, status:'disc'},
+  {id:'p8', label:'Port 8', sub:'Philips Hue Bridge', x:7, status:'on'},
+];
+
+// Ports hanging off sw2 (TP-Link, basement)
+const SW2_PORTS = [
+  {id:'b1', label:'Port 1', sub:'Uplink → eero Pro node', x:0, status:'uplink'},
+  {id:'b2', label:'Port 2', sub:'Mac mini (via dock)', x:1, status:'on'},
+  {id:'b3', label:'Port 3', sub:'Linux / Proxmox host — "inwood"', x:2, status:'on'},
+  {id:'b4', label:'Port 4', sub:'Empty', x:3, status:'empty'},
+  {id:'b5', label:'Port 5', sub:'Empty', x:4, status:'empty'},
+  {id:'b6', label:'Port 6', sub:'Empty', x:5, status:'empty'},
+  {id:'b7', label:'Port 7', sub:'Empty', x:6, status:'empty'},
+  {id:'b8', label:'Port 8', sub:'Empty', x:7, status:'empty'},
+];
+
+const PORT_DETAIL = {
+  p1:{Switch:'Netgear 8-port (living room)', Connects:'eero 7 gateway, Port B', Status:'Active uplink'},
+  p2:{Switch:'Netgear 8-port (living room)', Connects:'—', Status:'Empty, unused'},
+  p3:{Switch:'Netgear 8-port (living room)', Connects:'—', Status:'Empty, unused'},
+  p4:{Switch:'Netgear 8-port (living room)', Connects:'Xbox Series X', Status:'Active'},
+  p5:{Switch:'Netgear 8-port (living room)', Connects:'Apple TV 4K', Status:'Active'},
+  p6:{Switch:'Netgear 8-port (living room)', Connects:'LG Smart TV', Status:'Active'},
+  p7:{Switch:'Netgear 8-port (living room)', Connects:'Sonos Beam', Status:'Cable present, currently disconnected'},
+  p8:{Switch:'Netgear 8-port (living room)', Connects:'Philips Hue Bridge', Status:'Active'},
+  b1:{Switch:'TP-Link 8-port (basement)', Connects:'eero Pro mesh node, Port 1', Status:'Active uplink'},
+  b2:{Switch:'TP-Link 8-port (basement)', Connects:'Mac mini (Ethernet dock)', Status:'Active'},
+  b3:{Switch:'TP-Link 8-port (basement)', Connects:'Linux / Proxmox host "inwood" — LXCs: Vaultwarden, Homebridge, AdGuard, NPMplus, Netdata, Linkwarden; HA VM; Cloudflare Tunnel + Tailscale egress; rclone → R2 backups', Status:'Active — homelab node'},
+  b4:{Switch:'TP-Link 8-port (basement)', Connects:'—', Status:'Empty, no device reported'},
+  b5:{Switch:'TP-Link 8-port (basement)', Connects:'—', Status:'Empty, no device reported'},
+  b6:{Switch:'TP-Link 8-port (basement)', Connects:'—', Status:'Empty, no device reported'},
+  b7:{Switch:'TP-Link 8-port (basement)', Connects:'—', Status:'Empty, no device reported'},
+  b8:{Switch:'TP-Link 8-port (basement)', Connects:'—', Status:'Empty, no device reported'},
+};
+
+/* ---------------------------------------------------------
+   RENDER
+--------------------------------------------------------- */
+const svg = document.getElementById('topo');
+const NS = 'http://www.w3.org/2000/svg';
+function el(tag, attrs){
+  const e = document.createElementNS(NS, tag);
+  for(const k in attrs) e.setAttribute(k, attrs[k]);
+  return e;
+}
+function text(x,y,str,cls,anchor){
+  const t = el('text',{x,y,class:cls,'text-anchor':anchor||'middle'});
+  t.textContent = str;
+  return t;
+}
+
+function drawEdge(x1,y1,x2,y2,cls,label){
+  const midY = (y1+y2)/2;
+  const d = `M${x1},${y1} L${x1},${midY} L${x2},${midY} L${x2},${y2}`;
+  svg.appendChild(el('path',{d, class:'edge '+(cls||'')}));
+  if(label){
+    svg.appendChild(text((x1+x2)/2, midY-6, label, 'edge-label'));
+  }
+}
+
+function drawNode(id, n){
+  const g = el('g',{class:'node-group '+n.cls, 'data-id':id, 'data-type':'node'});
+  g.appendChild(el('rect',{x:n.x,y:n.y,width:n.w,height:n.h,class:'node-rect'}));
+  g.appendChild(text(n.x+n.w/2, n.y+28, n.title, 'node-title'));
+  g.appendChild(text(n.x+n.w/2, n.y+48, n.sub, 'node-sub'));
+  svg.appendChild(g);
+  g.addEventListener('click', ()=>select(id,'node'));
+}
+
+function drawPortRow(ports, switchX, switchY, switchW){
+  const portW = 118, portH=52, gap=10;
+  const totalW = ports.length*portW + (ports.length-1)*gap;
+  const startX = switchX + switchW/2 - totalW/2;
+  const y = switchY + 130;
+  ports.forEach((p,i)=>{
+    const x = startX + i*(portW+gap);
+    // connector line up to switch
+    svg.appendChild(el('line',{x1:x+portW/2,y1:y,x2:x+portW/2,y2:switchY+ (switchY < y ? 100 : 0), class:'edge '+(p.status==='empty'?'empty-link':p.status==='disc'?'disconnected':'')}));
+    const g = el('g',{class:'node-group', 'data-id':p.id, 'data-type':'port'});
+    const pillCls = 'port-pill'+(p.status==='empty'?' empty':'')+(p.status==='disc'?' disc':'');
+    g.appendChild(el('rect',{x,y,width:portW,height:portH,class:pillCls}));
+    g.appendChild(text(x+portW/2,y+20,p.label,'port-label'));
+    g.appendChild(text(x+portW/2,y+35, p.sub.length>18? p.sub.slice(0,17)+'…':p.sub,'port-sub'));
+    svg.appendChild(g);
+    g.addEventListener('click', ()=>select(p.id,'port'));
+  });
+}
+
+// Draw main backbone edges first (so they sit behind nodes)
+drawEdge(NODES.isp.x+NODES.isp.w/2, NODES.isp.y+NODES.isp.h, NODES.modem.x+NODES.modem.w/2, NODES.modem.y, '', 'ISP service');
+drawEdge(NODES.modem.x+NODES.modem.w/2, NODES.modem.y+NODES.modem.h, NODES.gw.x+NODES.gw.w/2, NODES.gw.y, '', 'Ethernet');
+drawEdge(NODES.gw.x+90, NODES.gw.y+NODES.gw.h, NODES.sw1.x+NODES.sw1.w/2, NODES.sw1.y, '', 'Ethernet uplink');
+drawEdge(NODES.gw.x+NODES.gw.w-40, NODES.gw.y+NODES.gw.h, NODES.mesh.x+90, NODES.mesh.y, 'mesh-link', 'Wireless mesh');
+drawEdge(NODES.mesh.x+NODES.mesh.w/2, NODES.mesh.y+NODES.mesh.h, NODES.sw2.x+NODES.sw2.w/2, NODES.sw2.y, '', 'Ethernet');
+
+// Nodes
+Object.entries(NODES).forEach(([id,n])=>drawNode(id,n));
+
+// Port rows
+drawPortRow(SW1_PORTS, NODES.sw1.x, NODES.sw1.y, NODES.sw1.w);
+drawPortRow(SW2_PORTS, NODES.sw2.x, NODES.sw2.y, NODES.sw2.w);
+
+/* ---------------------------------------------------------
+   PER-DEVICE LOCAL IPs
+   No LAN access from here to scan the network, so these are
+   editable fields — pull each device's IP from the eero app
+   (tap the device → its IP is listed) or your router admin
+   page, type it in once, and it's remembered in this browser
+   (localStorage — not synced across devices, since this is a
+   static page with no backend of its own).
+--------------------------------------------------------- */
+let DEVICE_IPS = {};
+try{ DEVICE_IPS = JSON.parse(localStorage.getItem('inwood-device-ips')||'{}'); }catch(e){ DEVICE_IPS = {}; }
+
+function ipRowHTML(id){
+  const val = DEVICE_IPS[id] || '';
+  return `<dt>Local IP</dt><dd><input type="text" class="ip-input" data-id="${id}" placeholder="192.168.x.x" value="${val}"><span class="ip-saved-note" id="ip-saved-${id}"></span></dd>`;
+}
+
+function wireIpInput(container){
+  const input = container.querySelector('.ip-input');
+  if(!input) return;
+  input.addEventListener('change', (e)=>{
+    const id = e.target.dataset.id;
+    const val = e.target.value.trim();
+    if(val){ DEVICE_IPS[id] = val; } else { delete DEVICE_IPS[id]; }
+    localStorage.setItem('inwood-device-ips', JSON.stringify(DEVICE_IPS));
+    const note = document.getElementById(`ip-saved-${id}`);
+    if(note){ note.textContent = 'saved'; setTimeout(()=>{ if(note) note.textContent=''; }, 1500); }
+    refreshRackIpLabels();
+  });
+}
+
+function refreshRackIpLabels(){
+  document.querySelectorAll('.rack-item').forEach(row=>{
+    const id = row.dataset.id;
+    const ipSpan = row.querySelector('.ip');
+    if(ipSpan) ipSpan.textContent = DEVICE_IPS[id] ? DEVICE_IPS[id] : '';
+  });
+}
+
+/* ---------------------------------------------------------
+   SELECTION / DETAIL PANEL
+--------------------------------------------------------- */
+function clearSelection(){
+  document.querySelectorAll('.node-group').forEach(g=>g.classList.remove('selected'));
+  document.querySelectorAll('.port-pill').forEach(p=>p.classList.remove('selected'));
+}
+
+function select(id, type){
+  clearSelection();
+  const detail = document.getElementById('detail');
+  if(type==='node'){
+    document.querySelector(`.node-group[data-id="${id}"]`).classList.add('selected');
+    const n = NODES[id];
+    let rows = Object.entries(n.detail).map(([k,v])=>`<dt>${k}</dt><dd class="${v==='—'||v==='Not yet recorded'||v.toString().includes('TBD')?'tbd':''}">${v}</dd>`).join('');
+    // ISP node gets the live public-IP readout instead of a manual field
+    if(id === 'isp'){
+      rows += `<dt>Public IP</dt><dd id="detail-pub-ip">${NET_STATE.ip || 'checking…'}</dd>`;
+      rows += `<dt>Last checked</dt><dd id="detail-pub-ip-meta">${NET_STATE.checkedAt ? timeAgo(NET_STATE.checkedAt) : '—'}</dd>`;
+    } else {
+      rows += ipRowHTML(id);
+    }
+    detail.innerHTML = `
+      <span class="dkind">${n.kind}</span>
+      <div class="dtitle">${n.title}</div>
+      <dl>${rows}</dl>
+    `;
+    wireIpInput(detail);
+  } else {
+    document.querySelector(`g[data-id="${id}"] .port-pill`).classList.add('selected');
+    const d = PORT_DETAIL[id];
+    const allPorts = [...SW1_PORTS, ...SW2_PORTS];
+    const p = allPorts.find(x=>x.id===id);
+    let statusTag = p.status==='disc' ? '<span class="tag disc">disconnected</span>' :
+                    p.status==='empty' ? '<span class="tag">empty</span>' :
+                    '<span class="tag online">active</span>';
+    let rows = Object.entries(d).map(([k,v])=>`<dt>${k}</dt><dd>${v}</dd>`).join('');
+    if(p.status !== 'empty'){ rows += ipRowHTML(id); }
+    detail.innerHTML = `
+      <span class="dkind">switch port</span>
+      <div class="dtitle">${p.label} ${statusTag}</div>
+      <dl>${rows}</dl>
+    `;
+    wireIpInput(detail);
+  }
+  detail.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+/* ---------------------------------------------------------
+   PUBLIC IP — polled client-side on a timer
+   This checks the public IP of whoever has the page open, via
+   a free no-key lookup (api.ipify.org). It compares against the
+   last value cached in this browser's localStorage and flags a
+   change. Because this is a static page (no server component),
+   the check only runs while the tab is open — it can't watch for
+   changes in the background when the page is closed. For real
+   always-on monitoring (checked every few minutes even with the
+   tab closed, with a change log), the same Worker+D1 polling
+   pattern already used for the Volvo dashboard's trip tracking
+   could be adapted here — say the word and I'll wire that up.
+--------------------------------------------------------- */
+const NET_STATE = { ip:null, checkedAt:null, changed:false };
+const IP_CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes while the tab is open
+
+function timeAgo(ts){
+  const s = Math.floor((Date.now()-ts)/1000);
+  if(s<60) return 'just now';
+  if(s<3600) return Math.floor(s/60)+'m ago';
+  if(s<86400) return Math.floor(s/3600)+'h ago';
+  return Math.floor(s/86400)+'d ago';
+}
+
+async function checkPublicIP(){
+  const dot = document.getElementById('pub-ip-dot');
+  const valueEl = document.getElementById('pub-ip-value');
+  const metaEl = document.getElementById('pub-ip-meta');
+  try{
+    const res = await fetch('https://api.ipify.org?format=json');
+    const data = await res.json();
+    const previous = localStorage.getItem('inwood-public-ip');
+    NET_STATE.ip = data.ip;
+    NET_STATE.checkedAt = Date.now();
+    NET_STATE.changed = !!(previous && previous !== data.ip);
+    localStorage.setItem('inwood-public-ip', data.ip);
+    localStorage.setItem('inwood-public-ip-checked', String(NET_STATE.checkedAt));
+    if(NET_STATE.changed){
+      localStorage.setItem('inwood-public-ip-changed-at', String(NET_STATE.checkedAt));
+    }
+    valueEl.textContent = data.ip;
+    dot.className = 'dot-live ' + (NET_STATE.changed ? 'changed' : 'ok');
+    metaEl.textContent = NET_STATE.changed
+      ? `changed from ${previous} · checked just now`
+      : `checked ${timeAgo(NET_STATE.checkedAt)}`;
+  }catch(e){
+    dot.className = 'dot-live err';
+    valueEl.textContent = 'unavailable';
+    metaEl.textContent = 'lookup failed — will retry';
+  }
+  // keep the ISP detail panel in sync if it's the one currently open
+  const pubIpEl = document.getElementById('detail-pub-ip');
+  if(pubIpEl){
+    pubIpEl.textContent = NET_STATE.ip || 'unavailable';
+    document.getElementById('detail-pub-ip-meta').textContent = timeAgo(NET_STATE.checkedAt);
+  }
+}
+
+document.getElementById('pub-ip-refresh').addEventListener('click', checkPublicIP);
+checkPublicIP();
+setInterval(checkPublicIP, IP_CHECK_INTERVAL_MS);
+
+/* ---------------------------------------------------------
+   RACK LIST (right card)
+--------------------------------------------------------- */
+const rack = document.getElementById('rack-list');
+const allEntries = [
+  {id:'isp', label:'Internet / ISP', meta:'upstream', led:'on'},
+  {id:'modem', label:'ISP Modem/Router', meta:'model TBD', led:'on'},
+  {id:'gw', label:'eero 7 Gateway', meta:'living room', led:'on'},
+  {id:'sw1', label:'Netgear 8-port switch', meta:'living room', led:'on'},
+  {id:'mesh', label:'eero Pro mesh node', meta:'basement', led:'on'},
+  {id:'sw2', label:'TP-Link 8-port switch', meta:'basement', led:'on'},
+  {id:'p4', label:'Xbox Series X', meta:'sw1 · port 4', led:'on'},
+  {id:'p5', label:'Apple TV 4K', meta:'sw1 · port 5', led:'on'},
+  {id:'p6', label:'LG Smart TV', meta:'sw1 · port 6', led:'on'},
+  {id:'p7', label:'Sonos Beam', meta:'sw1 · port 7', led:'warn'},
+  {id:'p8', label:'Philips Hue Bridge', meta:'sw1 · port 8', led:'on'},
+  {id:'b2', label:'Mac mini (dock)', meta:'sw2 · port 2', led:'on'},
+  {id:'b3', label:'Proxmox host "inwood"', meta:'sw2 · port 3', led:'on'},
+  {id:'basementpc', label:'Windows PC', meta:'direct → mesh node', led:'on'},
+];
+allEntries.forEach(item=>{
+  const row = document.createElement('div');
+  row.className = 'rack-item';
+  row.dataset.id = item.id;
+  row.innerHTML = `<div class="l"><span class="led ${item.led==='warn'?'warn':''}"></span><span class="name">${item.label}</span><span class="ip"></span></div><span class="meta">${item.meta}</span>`;
+  row.addEventListener('click', ()=>{
+    if(NODES[item.id]) select(item.id,'node');
+    else if(PORT_DETAIL[item.id]) select(item.id,'port');
+    else {
+      document.getElementById('detail').innerHTML = `
+        <span class="dkind">endpoint</span>
+        <div class="dtitle">Windows PC</div>
+        <dl><dt>Connects</dt><dd>Direct Ethernet → basement eero Pro node, Port 2</dd>
+        <dt>Status</dt><dd>Active</dd></dl>`;
+    }
+  });
+  rack.appendChild(row);
+});
+refreshRackIpLabels();
+
+/* ---------------------------------------------------------
+   EXPORT — PNG / PDF
+   Captures the diagram exactly as rendered (via html2canvas)
+   and either saves it straight as a PNG, or drops it into a
+   single-page PDF (via jsPDF). Both run entirely in the
+   browser — nothing is uploaded anywhere.
+--------------------------------------------------------- */
+const exportStatus = document.getElementById('export-status');
+const exportBtns = [document.getElementById('export-png-btn'), document.getElementById('export-pdf-btn')];
+
+function setExportBusy(busy, msg){
+  exportBtns.forEach(b=>b.disabled = busy);
+  exportStatus.textContent = msg || '';
+}
+
+async function captureStage(){
+  const target = document.querySelector('.stage-wrap');
+  const hideEls = target.querySelectorAll('.hint, .export-bar');
+  hideEls.forEach(el=>el.style.visibility = 'hidden');
+  try{
+    const canvas = await html2canvas(target, {
+      backgroundColor: '#141b23',
+      scale: 2,
+      useCORS: true
+    });
+    return canvas;
+  } finally {
+    hideEls.forEach(el=>el.style.visibility = '');
+  }
+}
+
+async function exportPNG(){
+  if(typeof html2canvas === 'undefined'){
+    setExportBusy(false, 'export library failed to load');
+    return;
+  }
+  setExportBusy(true, 'rendering…');
+  try{
+    const canvas = await captureStage();
+    canvas.toBlob(blob=>{
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'inwood-eero-topology.png';
+      a.click();
+      URL.revokeObjectURL(url);
+      setExportBusy(false, 'saved ✓');
+      setTimeout(()=>setExportBusy(false, ''), 2000);
+    }, 'image/png');
+  }catch(e){
+    setExportBusy(false, 'export failed');
+  }
+}
+
+async function exportPDF(){
+  if(typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined'){
+    setExportBusy(false, 'export library failed to load');
+    return;
+  }
+  setExportBusy(true, 'rendering…');
+  try{
+    const canvas = await captureStage();
+    const imgData = canvas.toDataURL('image/png');
+    const { jsPDF } = window.jspdf;
+    const orientation = canvas.width >= canvas.height ? 'landscape' : 'portrait';
+    const pdf = new jsPDF({ orientation, unit:'px', format:[canvas.width, canvas.height] });
+    pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+    pdf.save('inwood-eero-topology.pdf');
+    setExportBusy(false, 'saved ✓');
+    setTimeout(()=>setExportBusy(false, ''), 2000);
+  }catch(e){
+    setExportBusy(false, 'export failed');
+  }
+}
+
+document.getElementById('export-png-btn').addEventListener('click', exportPNG);
+document.getElementById('export-pdf-btn').addEventListener('click', exportPDF);
+</script>
+</body>
+</html>
