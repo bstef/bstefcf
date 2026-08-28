@@ -18,6 +18,7 @@ Cloudflare Pages deploys this repository automatically from `main`. There is no 
 | `whois.html` | Domain & IP WHOIS lookup |
 | `fork-sync.html` | GitHub fork sync status report |
 | `cloudflare.html` | Cloudflare traffic/cache/error dashboard |
+| `inwood-eero-network.html` | Interactive home network topology |
 | `volvo.html` | Volvo dashboard — vehicle status, controls, trips, map, fuel tracking and updates |
 | `home-value.html` | Private Home Value Tracker — family properties, valuations, rent data, taxes and value-history charts |
 
