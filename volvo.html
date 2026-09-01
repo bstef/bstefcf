@@ -822,6 +822,19 @@
 
     var VEHICLE_NICKNAME = "Indigo Jones";
 
+    // CARTO's raster basemap tiles (used for the dark-mode map) now require
+    // an API key — free tier, 5M tile requests/month. This is a client-side,
+    // rate-limited key meant to be embedded in front-end code (same model as
+    // a Mapbox/Google Maps public key), not a secret like the Volvo/Cloudflare
+    // credentials, so it's fine to keep it inline here rather than routing it
+    // through a Pages Function. Get one at https://carto.com/basemaps/apikey/
+    // — for extra protection against abuse, restrict it by HTTP referrer to
+    // this site's domain in the CARTO dashboard. Leave empty until then —
+    // setTileLayer() below only appends ?key= when this is non-empty, so
+    // the map falls back to today's unauthenticated (currently failing)
+    // request rather than sending a literal placeholder string as the key.
+    var CARTO_API_KEY = "";
+
     var COMMAND_META = {
       "lock": { label: "Lock", emoji: "🔒" },
       "unlock": { label: "Unlock", emoji: "🔓", sensitive: true },
@@ -1403,11 +1416,13 @@
 
     function setTileLayer() {
       if (state.map._tileLayer) state.map.removeLayer(state.map._tileLayer);
-      var url = state.theme === "dark"
-        ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+      var dark = state.theme === "dark";
+      var url = dark
+        ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" + (CARTO_API_KEY ? "?key=" + encodeURIComponent(CARTO_API_KEY) : "")
         : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
       state.map._tileLayer = L.tileLayer(url, {
         maxZoom: 19,
+        subdomains: dark ? "abcd" : "abc",
         attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
       }).addTo(state.map);
     }
