@@ -8,18 +8,9 @@
     "upToDate": 74,
     "conflicts": 0,
     "syncedRepos": [
-      {
-        "name": "openclaw",
-        "detail": "was 21 commits behind \u2192 updated"
-      },
-      {
-        "name": "domain-locker",
-        "detail": "was 4 commits behind \u2192 updated"
-      },
-      {
-        "name": "agent-sandbox",
-        "detail": "was 1 commit behind \u2192 updated"
-      }
+      { "name": "openclaw", "detail": "was 21 commits behind → updated" },
+      { "name": "domain-locker", "detail": "was 4 commits behind → updated" },
+      { "name": "agent-sandbox", "detail": "was 1 commit behind → updated" }
     ],
     "conflictRepos": [],
     "notes": ""
@@ -33,149 +24,56 @@
     "upToDate": 71,
     "conflicts": 0,
     "syncedRepos": [
-      {
-        "name": "openclaw",
-        "detail": "was 2 commits behind \u2192 updated"
-      },
-      {
-        "name": "awesome-swift-macos-apps",
-        "detail": "was 1 commit behind \u2192 updated"
-      },
-      {
-        "name": "anything-llm",
-        "detail": "was 2 commits behind \u2192 updated"
-      },
-      {
-        "name": "ghostty",
-        "detail": "was 2 commits behind \u2192 updated"
-      },
-      {
-        "name": "Ghost",
-        "detail": "was 7 commits behind \u2192 updated"
-      },
-      {
-        "name": "bitchat",
-        "detail": "was 43 ahead / 1 behind \u2192 merged"
-      }
+      { "name": "openclaw", "detail": "was 2 commits behind → updated" },
+      { "name": "awesome-swift-macos-apps", "detail": "was 1 commit behind → updated" },
+      { "name": "anything-llm", "detail": "was 2 commits behind → updated" },
+      { "name": "ghostty", "detail": "was 2 commits behind → updated" },
+      { "name": "Ghost", "detail": "was 7 commits behind → updated" },
+      { "name": "bitchat", "detail": "was 43 ahead / 1 behind → merged" }
     ],
     "conflictRepos": [],
     "notes": "Manually triggered by Bobby."
   },
   {
-    "date": "2026-08-31T03:42:10-04:00",
-    "dateDisplay": "Aug 31, 2026, 3:42 AM",
-    "status": "success",
+    "date": "2026-09-07T03:58:49-04:00",
+    "dateDisplay": "Sep 7, 2026, 3:58 AM",
+    "status": "partial",
     "forksChecked": 82,
-    "synced": 26,
-    "upToDate": 56,
-    "conflicts": 0,
+    "synced": 27,
+    "upToDate": 54,
+    "conflicts": 1,
     "syncedRepos": [
-      {
-        "name": "Eero-Dashboard",
-        "detail": "was 3 commits behind \u2192 updated"
-      },
-      {
-        "name": "LaunchOS",
-        "detail": "was 3 ahead / 2 behind \u2192 merged"
-      },
-      {
-        "name": "runtipi",
-        "detail": "was 12 commits behind \u2192 updated"
-      },
-      {
-        "name": "Claude-financial-services",
-        "detail": "was 3 commits behind \u2192 updated"
-      },
-      {
-        "name": "Ghost",
-        "detail": "was 243 commits behind \u2192 updated"
-      },
-      {
-        "name": "ghostty",
-        "detail": "was 286 commits behind \u2192 updated"
-      },
-      {
-        "name": "anything-llm",
-        "detail": "was 24 commits behind \u2192 updated"
-      },
-      {
-        "name": "awesome-swift-macos-apps",
-        "detail": "was 55 commits behind \u2192 updated"
-      },
-      {
-        "name": "openclaw",
-        "detail": "was 4557 commits behind \u2192 updated"
-      },
-      {
-        "name": "agent-sandbox",
-        "detail": "was 53 commits behind \u2192 updated"
-      },
-      {
-        "name": "everything-claude-code",
-        "detail": "was 190 commits behind \u2192 updated"
-      },
-      {
-        "name": "uptime-kuma",
-        "detail": "was 34 commits behind \u2192 updated"
-      },
-      {
-        "name": "bruno",
-        "detail": "was 52 commits behind \u2192 updated"
-      },
-      {
-        "name": "docling",
-        "detail": "was 45 commits behind \u2192 updated"
-      },
-      {
-        "name": "opencti",
-        "detail": "was 91 commits behind \u2192 updated"
-      },
-      {
-        "name": "humblehttp",
-        "detail": "was 15 commits behind \u2192 updated"
-      },
-      {
-        "name": "open-design",
-        "detail": "was 151 commits behind \u2192 updated"
-      },
-      {
-        "name": "claude-code-templates",
-        "detail": "was 56 commits behind \u2192 updated"
-      },
-      {
-        "name": "buzz",
-        "detail": "was 177 commits behind \u2192 updated"
-      },
-      {
-        "name": "cloudflare-os",
-        "detail": "was 41 commits behind \u2192 updated"
-      },
-      {
-        "name": "mcpservers",
-        "detail": "was 16 commits behind \u2192 updated"
-      },
-      {
-        "name": "SafeLine",
-        "detail": "was 6 commits behind \u2192 updated"
-      },
-      {
-        "name": "resume-builder",
-        "detail": "was 7 commits behind \u2192 updated"
-      },
-      {
-        "name": "team-generator",
-        "detail": "was 18 commits behind \u2192 updated"
-      },
-      {
-        "name": "nerdlog",
-        "detail": "was 2 commits behind \u2192 updated"
-      },
-      {
-        "name": "terraform-proxmox-k8s",
-        "detail": "was 2 commits behind \u2192 updated"
-      }
+      { "name": "team-generator", "detail": "was 1 commit behind → updated" },
+      { "name": "resume-builder", "detail": "was 6 commits behind → updated" },
+      { "name": "SafeLine", "detail": "was 2 commits behind → updated" },
+      { "name": "mcpservers", "detail": "was 14 commits behind → updated" },
+      { "name": "cloudflare-os", "detail": "was 37 commits behind → updated" },
+      { "name": "buzz", "detail": "was 77 commits behind → updated" },
+      { "name": "claude-code-templates", "detail": "was 25 commits behind → updated" },
+      { "name": "open-design", "detail": "was 44 commits behind → updated" },
+      { "name": "humblehttp", "detail": "was 17 commits behind → updated" },
+      { "name": "opencti", "detail": "was 50 commits behind → updated" },
+      { "name": "docling", "detail": "was 29 commits behind → updated" },
+      { "name": "bruno", "detail": "was 40 commits behind → updated" },
+      { "name": "uptime-kuma", "detail": "was 17 commits behind → updated" },
+      { "name": "everything-claude-code", "detail": "was 18 commits behind → updated" },
+      { "name": "agent-sandbox", "detail": "was 40 commits behind → updated" },
+      { "name": "openclaw", "detail": "was 4256 commits behind → updated" },
+      { "name": "awesome-swift-macos-apps", "detail": "was 33 commits behind → updated" },
+      { "name": "anything-llm", "detail": "was 30 commits behind → updated" },
+      { "name": "ghostty", "detail": "was 133 commits behind → updated" },
+      { "name": "Ghost", "detail": "was 141 commits behind → updated" },
+      { "name": "Eero-Dashboard", "detail": "was 2 commits behind → updated" },
+      { "name": "CL4R1T4S", "detail": "was 1 commit behind → updated" },
+      { "name": "itsyhome-macos", "detail": "was 9 commits behind → updated" },
+      { "name": "Feedly-Notifier", "detail": "was 12 commits behind → updated" },
+      { "name": "regen", "detail": "was 12 commits behind → updated" },
+      { "name": "umbrel", "detail": "was 190 commits behind → updated" },
+      { "name": "castkeeper", "detail": "was 1 commit behind → updated" }
     ],
-    "conflictRepos": [],
-    "notes": "Fork count grew from 77 to 82 since the last run (Bobby added new forks). All commits-behind repos synced cleanly via fast-forward/merge with no conflicts."
+    "conflictRepos": [
+      { "name": "terraform-proxmox-k8s", "note": "12 commits behind, 2 commits ahead — GitHub's Sync fork popover offered only 'Discard 2 commits' or 'Open pull request' (no fast-forward/merge option), so it was skipped per instructions to never discard the user's own commits. Needs manual conflict resolution." }
+    ],
+    "notes": ""
   }
 ]
