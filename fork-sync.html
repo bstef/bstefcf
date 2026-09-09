@@ -278,6 +278,123 @@
       padding: 30px 0;
     }
 
+    .analytics-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+
+    .analytics-card {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+    }
+
+    .analytics-card .num {
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    .analytics-card .label {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 4px;
+    }
+
+    .chart {
+      display: grid;
+      gap: 12px;
+    }
+
+    .bar-row {
+      display: grid;
+      grid-template-columns: minmax(120px, 180px) 1fr 34px;
+      align-items: center;
+      gap: 10px;
+      font-size: 12px;
+    }
+
+    .bar-label {
+      color: var(--muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .bar-track {
+      height: 10px;
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: 5px;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      min-width: 3px;
+      background: var(--accent);
+      border-radius: 5px;
+    }
+
+    .bar-fill.partial {
+      background: var(--yellow);
+    }
+
+    .bar-fill.failed {
+      background: var(--red);
+    }
+
+    .bar-value {
+      color: var(--text);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      text-align: right;
+    }
+
+    .chart-note {
+      color: var(--muted);
+      font-size: 12px;
+      margin: -4px 0 16px;
+    }
+
+    @media (max-width: 680px) {
+      body {
+        padding: 32px 14px;
+      }
+
+      .stats,
+      .analytics-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .section {
+        padding: 18px 16px;
+      }
+
+      .tabs {
+        overflow-x: auto;
+      }
+
+      .tab-btn {
+        flex: 0 0 auto;
+        margin-right: 10px;
+      }
+
+      .bar-row {
+        grid-template-columns: minmax(90px, 1fr) 1.4fr 28px;
+        gap: 7px;
+      }
+
+      table.history {
+        min-width: 700px;
+      }
+
+      .section:has(table.history) {
+        overflow-x: auto;
+      }
+    }
+
     footer {
       text-align: center;
       margin-top: 48px;
@@ -319,6 +436,7 @@
     <div class="tabs">
       <button class="tab-btn active" data-tab="latest">Latest Run</button>
       <button class="tab-btn" data-tab="history">History</button>
+      <button class="tab-btn" data-tab="analytics">Analytics</button>
     </div>
 
     <div class="tab-panel active" id="panel-latest">
@@ -355,6 +473,23 @@
       </div>
     </div>
 
+    <div class="tab-panel" id="panel-analytics">
+      <div class="analytics-grid" id="analytics-stats"></div>
+      <div class="section">
+        <h2>Run outcomes</h2>
+        <div class="chart" id="status-chart"></div>
+      </div>
+      <div class="section">
+        <h2>Forks updated per run</h2>
+        <div class="chart" id="volume-chart"></div>
+      </div>
+      <div class="section">
+        <h2>Most frequently updated forks</h2>
+        <p class="chart-note" id="repo-chart-note"></p>
+        <div class="chart" id="repo-chart"></div>
+      </div>
+    </div>
+
     <footer>
       Auto-updated by the <code>github-branch-update-check</code> scheduled task
     </footer>
@@ -372,6 +507,65 @@
     function statusPill(status) {
       var cls = status === 'success' ? 'status-success' : status === 'partial' ? 'status-partial' : 'status-failed';
       return '<span class="status-pill ' + cls + '">' + escapeHtml(status || 'unknown') + '</span>';
+    }
+
+    function barRow(label, value, max, className) {
+      var width = max ? Math.max(3, Math.round((value / max) * 100)) : 3;
+      return '<div class="bar-row">' +
+        '<span class="bar-label" title="' + escapeHtml(label) + '">' + escapeHtml(label) + '</span>' +
+        '<span class="bar-track"><span class="bar-fill ' + (className || '') + '" style="width:' + width + '%"></span></span>' +
+        '<span class="bar-value">' + value + '</span>' +
+        '</div>';
+    }
+
+    function renderAnalytics(history) {
+      var statusCounts = { success: 0, partial: 0, failed: 0 };
+      var totalSynced = 0;
+      var totalChecked = 0;
+      var totalConflicts = 0;
+      var repoCounts = {};
+      var detailedRuns = 0;
+
+      history.forEach(function (run) {
+        var status = run.status || 'failed';
+        statusCounts[status] = (statusCounts[status] || 0) + 1;
+        totalSynced += Number(run.synced) || 0;
+        totalChecked += Number(run.forksChecked) || 0;
+        totalConflicts += Number(run.conflicts) || 0;
+        if (Array.isArray(run.syncedRepos) && run.syncedRepos.length) {
+          detailedRuns++;
+          run.syncedRepos.forEach(function (repo) {
+            repoCounts[repo.name] = (repoCounts[repo.name] || 0) + 1;
+          });
+        }
+      });
+
+      document.getElementById('analytics-stats').innerHTML =
+        '<div class="analytics-card"><div class="num">' + history.length + '</div><div class="label">Runs tracked</div></div>' +
+        '<div class="analytics-card"><div class="num">' + totalSynced + '</div><div class="label">Fork updates</div></div>' +
+        '<div class="analytics-card"><div class="num">' + totalConflicts + '</div><div class="label">Conflicts recorded</div></div>' +
+        '<div class="analytics-card"><div class="num">' + (history.length ? Math.round(totalChecked / history.length) : 0) + '</div><div class="label">Avg. forks checked</div></div>';
+
+      var statusMax = Math.max(statusCounts.success, statusCounts.partial, statusCounts.failed, 1);
+      document.getElementById('status-chart').innerHTML =
+        barRow('Successful', statusCounts.success, statusMax, '') +
+        barRow('Partial', statusCounts.partial, statusMax, 'partial') +
+        barRow('Failed', statusCounts.failed, statusMax, 'failed');
+
+      var volumeMax = Math.max.apply(null, history.map(function (run) { return Number(run.synced) || 0; }).concat([1]));
+      document.getElementById('volume-chart').innerHTML = history.map(function (run) {
+        return barRow(run.dateDisplay || run.date || 'Unknown run', Number(run.synced) || 0, volumeMax, run.status === 'partial' ? 'partial' : run.status === 'failed' ? 'failed' : '');
+      }).join('');
+
+      var topRepos = Object.keys(repoCounts).sort(function (a, b) {
+        return repoCounts[b] - repoCounts[a] || a.localeCompare(b);
+      }).slice(0, 8);
+      document.getElementById('repo-chart-note').textContent = detailedRuns ?
+        'Based on repository-level details from ' + detailedRuns + ' of ' + history.length + ' runs.' :
+        'Repository-level details are not available in the recorded runs yet.';
+      document.getElementById('repo-chart').innerHTML = topRepos.length ? topRepos.map(function (name) {
+        return barRow(name, repoCounts[name], repoCounts[topRepos[0]], '');
+      }).join('') : '<div class="empty-state">No repository-level update details recorded yet.</div>';
     }
 
     fetch('/fork-sync-history.json', { cache: 'no-store' })
@@ -442,6 +636,7 @@
         } else {
           document.getElementById('history-empty').style.display = '';
         }
+        renderAnalytics(history);
       });
 
     document.querySelectorAll('.tab-btn').forEach(function (btn) {
