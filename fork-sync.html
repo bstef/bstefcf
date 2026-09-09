@@ -1,335 +1,458 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍴</text></svg>">
-<link rel="stylesheet" href="/site-nav.css">
-<title>🍴 GitHub Fork Sync Report — bstef.pages.dev</title>
-<style>
-  :root {
-    --bg: #0a0e14;
-    --grid: rgba(255,255,255,0.04);
-    --accent: #5eead4;
-    --text: #e5e7eb;
-    --muted: #8b93a1;
-    --card: #10151f;
-    --border: rgba(255,255,255,0.08);
-    --yellow: #f5c451;
-    --red: #f87171;
-  }
-  * { box-sizing: border-box; }
-  html, body {
-    margin: 0;
-    background: var(--bg);
-    color: var(--text);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-  }
-  body {
-    background-image:
-      linear-gradient(var(--grid) 1px, transparent 1px),
-      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
-    background-size: 40px 40px;
-    min-height: 100vh;
-    padding: 60px 24px;
-  }
-  .wrap { max-width: 880px; margin: 0 auto; }
-  header { margin-bottom: 28px; }
-  .tag {
-    display: inline-block;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    font-size: 13px;
-    color: var(--accent);
-    border: 1px solid rgba(94,234,212,0.3);
-    background: rgba(94,234,212,0.06);
-    padding: 3px 10px;
-    border-radius: 20px;
-    margin-bottom: 14px;
-  }
-  h1 { margin: 0 0 8px 0; font-size: 26px; }
-  .sub { color: var(--muted); font-size: 14px; }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍴</text></svg>">
+  <link rel="stylesheet" href="/site-nav.css">
+  <title>🍴 GitHub Fork Sync Report — bstef.pages.dev</title>
+  <style>
+    :root {
+      --bg: #0a0e14;
+      --grid: rgba(255, 255, 255, 0.04);
+      --accent: #5eead4;
+      --text: #e5e7eb;
+      --muted: #8b93a1;
+      --card: #10151f;
+      --border: rgba(255, 255, 255, 0.08);
+      --yellow: #f5c451;
+      --red: #f87171;
+    }
 
-  .tabs {
-    display: flex;
-    gap: 4px;
-    margin-bottom: 24px;
-    border-bottom: 1px solid var(--border);
-  }
-  .tab-btn {
-    background: none;
-    border: none;
-    color: var(--muted);
-    font-size: 14px;
-    font-weight: 500;
-    padding: 10px 4px;
-    margin-right: 20px;
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
-    font-family: inherit;
-  }
-  .tab-btn.active { color: var(--text); border-bottom-color: var(--accent); }
-  .tab-btn:hover { color: var(--accent); }
-  .tab-panel { display: none; }
-  .tab-panel.active { display: block; }
+    * {
+      box-sizing: border-box;
+    }
 
-  .stats {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 14px;
-    margin-bottom: 32px;
-  }
-  .stat {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 18px;
-    text-align: center;
-  }
-  .stat .num { font-size: 26px; font-weight: 600; color: var(--accent); }
-  .stat .label { color: var(--muted); font-size: 12px; margin-top: 4px; }
+    html,
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    }
 
-  .section {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 22px 24px;
-    margin-bottom: 20px;
-  }
-  .section h2 {
-    font-size: 15px;
-    margin: 0 0 14px 0;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .badge {
-    display: inline-block;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    font-size: 11px;
-    font-weight: 600;
-    padding: 2px 9px;
-    border-radius: 12px;
-    background: rgba(94,234,212,0.1);
-    color: var(--accent);
-    border: 1px solid rgba(94,234,212,0.25);
-  }
-  .status-pill {
-    display: inline-block;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    font-size: 11px;
-    font-weight: 600;
-    padding: 3px 10px;
-    border-radius: 20px;
-    text-transform: uppercase;
-    letter-spacing: 0.02em;
-  }
-  .status-success { background: rgba(94,234,212,0.1); color: var(--accent); border: 1px solid rgba(94,234,212,0.3); }
-  .status-partial { background: rgba(245,196,81,0.1); color: var(--yellow); border: 1px solid rgba(245,196,81,0.3); }
-  .status-failed { background: rgba(248,113,113,0.1); color: var(--red); border: 1px solid rgba(248,113,113,0.3); }
+    body {
+      background-image:
+        linear-gradient(var(--grid) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+      background-size: 40px 40px;
+      min-height: 100vh;
+      padding: 60px 24px;
+    }
 
-  ul.repo-list { list-style: none; margin: 0; padding: 0; }
-  ul.repo-list li {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    padding: 9px 0;
-    border-bottom: 1px solid var(--border);
-    font-size: 13px;
-  }
-  ul.repo-list li:last-child { border-bottom: none; }
-  ul.repo-list a { color: var(--text); text-decoration: none; font-weight: 500; }
-  ul.repo-list a:hover { color: var(--accent); }
-  .detail { color: var(--muted); font-size: 12px; text-align: right; white-space: normal; flex: 1; min-width: 0; padding-left: 12px; }
+    .wrap {
+      max-width: 880px;
+      margin: 0 auto;
+    }
 
-  table.history {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 13px;
-  }
-  table.history th {
-    text-align: left;
-    color: var(--muted);
-    font-weight: 500;
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-    padding: 0 10px 10px 10px;
-    border-bottom: 1px solid var(--border);
-  }
-  table.history td {
-    padding: 12px 10px;
-    border-bottom: 1px solid var(--border);
-    vertical-align: top;
-  }
-  table.history tr:last-child td { border-bottom: none; }
-  table.history .num-cell { color: var(--accent); font-weight: 600; }
-  table.history .notes-cell { color: var(--muted); font-size: 12px; max-width: 220px; }
+    header {
+      margin-bottom: 28px;
+    }
 
-  .empty-state { color: var(--muted); font-size: 13px; text-align: center; padding: 30px 0; }
+    .tag {
+      display: inline-block;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 13px;
+      color: var(--accent);
+      border: 1px solid rgba(94, 234, 212, 0.3);
+      background: rgba(94, 234, 212, 0.06);
+      padding: 3px 10px;
+      border-radius: 20px;
+      margin-bottom: 14px;
+    }
 
-  footer {
-    text-align: center;
-    margin-top: 48px;
-    font-size: 13px;
-    color: var(--muted);
-  }
-  footer a { color: var(--muted); text-decoration: none; border-bottom: 1px solid rgba(255,255,255,0.15); }
-  footer a:hover { color: var(--accent); border-color: var(--accent); }
-  code {
-    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    background: rgba(255,255,255,0.06);
-    padding: 1px 6px;
-    border-radius: 4px;
-    font-size: 12px;
-  }
-</style>
+    h1 {
+      margin: 0 0 8px 0;
+      font-size: 26px;
+    }
+
+    .sub {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .tab-btn {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 500;
+      padding: 10px 4px;
+      margin-right: 20px;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      font-family: inherit;
+    }
+
+    .tab-btn.active {
+      color: var(--text);
+      border-bottom-color: var(--accent);
+    }
+
+    .tab-btn:hover {
+      color: var(--accent);
+    }
+
+    .tab-panel {
+      display: none;
+    }
+
+    .tab-panel.active {
+      display: block;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-bottom: 32px;
+    }
+
+    .stat {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px;
+      text-align: center;
+    }
+
+    .stat .num {
+      font-size: 26px;
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    .stat .label {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 4px;
+    }
+
+    .section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 22px 24px;
+      margin-bottom: 20px;
+    }
+
+    .section h2 {
+      font-size: 15px;
+      margin: 0 0 14px 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .badge {
+      display: inline-block;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 9px;
+      border-radius: 12px;
+      background: rgba(94, 234, 212, 0.1);
+      color: var(--accent);
+      border: 1px solid rgba(94, 234, 212, 0.25);
+    }
+
+    .status-pill {
+      display: inline-block;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+
+    .status-success {
+      background: rgba(94, 234, 212, 0.1);
+      color: var(--accent);
+      border: 1px solid rgba(94, 234, 212, 0.3);
+    }
+
+    .status-partial {
+      background: rgba(245, 196, 81, 0.1);
+      color: var(--yellow);
+      border: 1px solid rgba(245, 196, 81, 0.3);
+    }
+
+    .status-failed {
+      background: rgba(248, 113, 113, 0.1);
+      color: var(--red);
+      border: 1px solid rgba(248, 113, 113, 0.3);
+    }
+
+    ul.repo-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    ul.repo-list li {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 9px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+
+    ul.repo-list li:last-child {
+      border-bottom: none;
+    }
+
+    ul.repo-list a {
+      color: var(--text);
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    ul.repo-list a:hover {
+      color: var(--accent);
+    }
+
+    .detail {
+      color: var(--muted);
+      font-size: 12px;
+      text-align: right;
+      white-space: normal;
+      flex: 1;
+      min-width: 0;
+      padding-left: 12px;
+    }
+
+    table.history {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    table.history th {
+      text-align: left;
+      color: var(--muted);
+      font-weight: 500;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      padding: 0 10px 10px 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    table.history td {
+      padding: 12px 10px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    table.history tr:last-child td {
+      border-bottom: none;
+    }
+
+    table.history .num-cell {
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    table.history .notes-cell {
+      color: var(--muted);
+      font-size: 12px;
+      max-width: 220px;
+    }
+
+    .empty-state {
+      color: var(--muted);
+      font-size: 13px;
+      text-align: center;
+      padding: 30px 0;
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 48px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    footer a {
+      color: var(--muted);
+      text-decoration: none;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    footer a:hover {
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      background: rgba(255, 255, 255, 0.06);
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+  </style>
 </head>
+
 <body>
-<div class="wrap">
-  <div id="site-back"></div>
+  <div class="wrap">
+    <div id="site-back"></div>
 
-  <header>
-    <div class="tag">&#9679; github-branch-update-check</div>
-    <h1>🍴 GitHub Fork Sync Report</h1>
-    <div class="sub" id="latest-sub">Loading&hellip;</div>
-  </header>
+    <header>
+      <div class="tag">&#9679; github-branch-update-check</div>
+      <h1>🍴 GitHub Fork Sync Report</h1>
+      <div class="sub" id="latest-sub">Loading&hellip;</div>
+    </header>
 
-  <div class="tabs">
-    <button class="tab-btn active" data-tab="latest">Latest Run</button>
-    <button class="tab-btn" data-tab="history">History</button>
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="latest">Latest Run</button>
+      <button class="tab-btn" data-tab="history">History</button>
+    </div>
+
+    <div class="tab-panel active" id="panel-latest">
+      <div class="stats" id="latest-stats"></div>
+      <div class="section" id="latest-synced-section" style="display:none;">
+        <h2>Synced this run <span class="badge" id="latest-synced-badge">0</span></h2>
+        <ul class="repo-list" id="latest-synced-list"></ul>
+      </div>
+      <div class="section" id="latest-conflicts-section" style="display:none;">
+        <h2>Conflicts requiring manual resolution <span class="badge" id="latest-conflicts-badge">0</span></h2>
+        <ul class="repo-list" id="latest-conflicts-list"></ul>
+      </div>
+      <div class="empty-state" id="latest-empty" style="display:none;"></div>
+    </div>
+
+    <div class="tab-panel" id="panel-history">
+      <div class="section">
+        <h2>Run history <span class="badge" id="history-count-badge">0</span></h2>
+        <table class="history" id="history-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Status</th>
+              <th>Checked</th>
+              <th>Synced</th>
+              <th>Up to date</th>
+              <th>Conflicts</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody id="history-tbody"></tbody>
+        </table>
+        <div class="empty-state" id="history-empty" style="display:none;">No history recorded yet.</div>
+      </div>
+    </div>
+
+    <footer>
+      Auto-updated by the <code>github-branch-update-check</code> scheduled task
+    </footer>
+
+    <div id="site-footer"></div>
   </div>
 
-  <div class="tab-panel active" id="panel-latest">
-    <div class="stats" id="latest-stats"></div>
-    <div class="section" id="latest-synced-section" style="display:none;">
-      <h2>Synced this run <span class="badge" id="latest-synced-badge">0</span></h2>
-      <ul class="repo-list" id="latest-synced-list"></ul>
-    </div>
-    <div class="section" id="latest-conflicts-section" style="display:none;">
-      <h2>Conflicts requiring manual resolution <span class="badge" id="latest-conflicts-badge">0</span></h2>
-      <ul class="repo-list" id="latest-conflicts-list"></ul>
-    </div>
-    <div class="empty-state" id="latest-empty" style="display:none;"></div>
-  </div>
-
-  <div class="tab-panel" id="panel-history">
-    <div class="section">
-      <h2>Run history <span class="badge" id="history-count-badge">0</span></h2>
-      <table class="history" id="history-table">
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Status</th>
-            <th>Checked</th>
-            <th>Synced</th>
-            <th>Up to date</th>
-            <th>Conflicts</th>
-            <th>Notes</th>
-          </tr>
-        </thead>
-        <tbody id="history-tbody"></tbody>
-      </table>
-      <div class="empty-state" id="history-empty" style="display:none;">No history recorded yet.</div>
-    </div>
-  </div>
-
-  <footer>
-    Auto-updated by the <code>github-branch-update-check</code> scheduled task
-  </footer>
-
-  <div id="site-footer"></div>
-</div>
-
-<script src="/site-nav.js" defer></script>
-<script>
-function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, function(c) {
-    return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];
-  });
-}
-function statusPill(status) {
-  var cls = status === 'success' ? 'status-success' : status === 'partial' ? 'status-partial' : 'status-failed';
-  return '<span class="status-pill ' + cls + '">' + escapeHtml(status || 'unknown') + '</span>';
-}
-
-fetch('/fork-sync-history.json', {cache: 'no-store'})
-  .then(function(r) { return r.ok ? r.json() : []; })
-  .catch(function() { return []; })
-  .then(function(history) {
-    if (!Array.isArray(history)) history = [];
-    history = history.slice().sort(function(a, b) { return new Date(b.date) - new Date(a.date); });
-
-    var latest = history[0];
-    if (latest) {
-      document.getElementById('latest-sub').innerHTML =
-        'bstef &middot; GitHub forks synced with upstream &middot; ' + escapeHtml(latest.dateDisplay || latest.date) +
-        ' &middot; ' + statusPill(latest.status);
-
-      document.getElementById('latest-stats').innerHTML =
-        '<div class="stat"><div class="num">' + (latest.forksChecked != null ? latest.forksChecked : '—') + '</div><div class="label">Forks checked</div></div>' +
-        '<div class="stat"><div class="num">' + (latest.synced != null ? latest.synced : '—') + '</div><div class="label">Synced</div></div>' +
-        '<div class="stat"><div class="num">' + (latest.upToDate != null ? latest.upToDate : '—') + '</div><div class="label">Already up to date</div></div>' +
-        '<div class="stat"><div class="num">' + (latest.conflicts != null ? latest.conflicts : '—') + '</div><div class="label">Conflicts</div></div>';
-
-      var syncedRepos = latest.syncedRepos || [];
-      if (syncedRepos.length) {
-        document.getElementById('latest-synced-section').style.display = '';
-        document.getElementById('latest-synced-badge').textContent = syncedRepos.length;
-        document.getElementById('latest-synced-list').innerHTML = syncedRepos.map(function(r) {
-          return '<li><a href="https://github.com/bstef/' + encodeURIComponent(r.name) + '" target="_blank">' + escapeHtml(r.name) + '</a>' +
-            '<span class="detail">' + escapeHtml(r.detail || '') + '</span></li>';
-        }).join('');
-      }
-
-      var conflictRepos = latest.conflictRepos || [];
-      document.getElementById('latest-conflicts-section').style.display = '';
-      document.getElementById('latest-conflicts-badge').textContent = conflictRepos.length;
-      if (conflictRepos.length) {
-        document.getElementById('latest-conflicts-list').innerHTML = conflictRepos.map(function(r) {
-          return '<li><a href="https://github.com/bstef/' + encodeURIComponent(r.name) + '" target="_blank">' + escapeHtml(r.name) + '</a>' +
-            '<span class="detail">' + escapeHtml(r.note || r.detail || '') + '</span></li>';
-        }).join('');
-      } else {
-        document.getElementById('latest-conflicts-list').innerHTML =
-          '<li style="border-bottom:none;"><span style="color:var(--muted);">None. All previously-flagged conflicts have been resolved.</span></li>';
-      }
-
-      if (latest.notes) {
-        document.getElementById('latest-empty').style.display = '';
-        document.getElementById('latest-empty').textContent = latest.notes;
-      }
-    } else {
-      document.getElementById('latest-sub').textContent = 'No run data found yet.';
-      document.getElementById('latest-empty').style.display = '';
-      document.getElementById('latest-empty').textContent = 'No run data found yet.';
+  <script src="/site-nav.js" defer></script>
+  <script>
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, function (c) {
+        return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+      });
+    }
+    function statusPill(status) {
+      var cls = status === 'success' ? 'status-success' : status === 'partial' ? 'status-partial' : 'status-failed';
+      return '<span class="status-pill ' + cls + '">' + escapeHtml(status || 'unknown') + '</span>';
     }
 
-    document.getElementById('history-count-badge').textContent = history.length;
-    if (history.length) {
-      document.getElementById('history-tbody').innerHTML = history.map(function(run) {
-        return '<tr>' +
-          '<td>' + escapeHtml(run.dateDisplay || run.date || '') + '</td>' +
-          '<td>' + statusPill(run.status) + '</td>' +
-          '<td class="num-cell">' + (run.forksChecked != null ? run.forksChecked : '—') + '</td>' +
-          '<td class="num-cell">' + (run.synced != null ? run.synced : '—') + '</td>' +
-          '<td class="num-cell">' + (run.upToDate != null ? run.upToDate : '—') + '</td>' +
-          '<td class="num-cell">' + (run.conflicts != null ? run.conflicts : '—') + '</td>' +
-          '<td class="notes-cell">' + escapeHtml(run.notes || '') + '</td>' +
-        '</tr>';
-      }).join('');
-    } else {
-      document.getElementById('history-empty').style.display = '';
-    }
-  });
+    fetch('/fork-sync-history.json', { cache: 'no-store' })
+      .then(function (r) { return r.ok ? r.json() : []; })
+      .catch(function () { return []; })
+      .then(function (history) {
+        if (!Array.isArray(history)) history = [];
+        history = history.slice().sort(function (a, b) { return new Date(b.date) - new Date(a.date); });
 
-document.querySelectorAll('.tab-btn').forEach(function(btn) {
-  btn.addEventListener('click', function() {
-    document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
-    document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.remove('active'); });
-    btn.classList.add('active');
-    document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
-  });
-});
-</script>
+        var latest = history[0];
+        if (latest) {
+          document.getElementById('latest-sub').innerHTML =
+            'bstef &middot; GitHub forks synced with upstream &middot; ' + escapeHtml(latest.dateDisplay || latest.date) +
+            ' &middot; ' + statusPill(latest.status);
+
+          document.getElementById('latest-stats').innerHTML =
+            '<div class="stat"><div class="num">' + (latest.forksChecked != null ? latest.forksChecked : '—') + '</div><div class="label">Forks checked</div></div>' +
+            '<div class="stat"><div class="num">' + (latest.synced != null ? latest.synced : '—') + '</div><div class="label">Synced</div></div>' +
+            '<div class="stat"><div class="num">' + (latest.upToDate != null ? latest.upToDate : '—') + '</div><div class="label">Already up to date</div></div>' +
+            '<div class="stat"><div class="num">' + (latest.conflicts != null ? latest.conflicts : '—') + '</div><div class="label">Conflicts</div></div>';
+
+          var syncedRepos = latest.syncedRepos || [];
+          if (syncedRepos.length) {
+            document.getElementById('latest-synced-section').style.display = '';
+            document.getElementById('latest-synced-badge').textContent = syncedRepos.length;
+            document.getElementById('latest-synced-list').innerHTML = syncedRepos.map(function (r) {
+              return '<li><a href="https://github.com/bstef/' + encodeURIComponent(r.name) + '" target="_blank">' + escapeHtml(r.name) + '</a>' +
+                '<span class="detail">' + escapeHtml(r.detail || '') + '</span></li>';
+            }).join('');
+          }
+
+          var conflictRepos = latest.conflictRepos || [];
+          document.getElementById('latest-conflicts-section').style.display = '';
+          document.getElementById('latest-conflicts-badge').textContent = conflictRepos.length;
+          if (conflictRepos.length) {
+            document.getElementById('latest-conflicts-list').innerHTML = conflictRepos.map(function (r) {
+              return '<li><a href="https://github.com/bstef/' + encodeURIComponent(r.name) + '" target="_blank">' + escapeHtml(r.name) + '</a>' +
+                '<span class="detail">' + escapeHtml(r.note || r.detail || '') + '</span></li>';
+            }).join('');
+          } else {
+            document.getElementById('latest-conflicts-list').innerHTML =
+              '<li style="border-bottom:none;"><span style="color:var(--muted);">None. All previously-flagged conflicts have been resolved.</span></li>';
+          }
+
+          if (latest.notes) {
+            document.getElementById('latest-empty').style.display = '';
+            document.getElementById('latest-empty').textContent = latest.notes;
+          }
+        } else {
+          document.getElementById('latest-sub').textContent = 'No run data found yet.';
+          document.getElementById('latest-empty').style.display = '';
+          document.getElementById('latest-empty').textContent = 'No run data found yet.';
+        }
+
+        document.getElementById('history-count-badge').textContent = history.length;
+        if (history.length) {
+          document.getElementById('history-tbody').innerHTML = history.map(function (run) {
+            return '<tr>' +
+              '<td>' + escapeHtml(run.dateDisplay || run.date || '') + '</td>' +
+              '<td>' + statusPill(run.status) + '</td>' +
+              '<td class="num-cell">' + (run.forksChecked != null ? run.forksChecked : '—') + '</td>' +
+              '<td class="num-cell">' + (run.synced != null ? run.synced : '—') + '</td>' +
+              '<td class="num-cell">' + (run.upToDate != null ? run.upToDate : '—') + '</td>' +
+              '<td class="num-cell">' + (run.conflicts != null ? run.conflicts : '—') + '</td>' +
+              '<td class="notes-cell">' + escapeHtml(run.notes || '') + '</td>' +
+              '</tr>';
+          }).join('');
+        } else {
+          document.getElementById('history-empty').style.display = '';
+        }
+      });
+
+    document.querySelectorAll('.tab-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        document.querySelectorAll('.tab-btn').forEach(function (b) { b.classList.remove('active'); });
+        document.querySelectorAll('.tab-panel').forEach(function (p) { p.classList.remove('active'); });
+        btn.classList.add('active');
+        document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
+      });
+    });
+  </script>
 </body>
+
 </html>
