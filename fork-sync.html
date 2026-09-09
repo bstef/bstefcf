@@ -131,7 +131,7 @@
   ul.repo-list li {
     display: flex;
     justify-content: space-between;
-    align-items: baseline;
+    align-items: flex-start;
     padding: 9px 0;
     border-bottom: 1px solid var(--border);
     font-size: 13px;
@@ -139,7 +139,7 @@
   ul.repo-list li:last-child { border-bottom: none; }
   ul.repo-list a { color: var(--text); text-decoration: none; font-weight: 500; }
   ul.repo-list a:hover { color: var(--accent); }
-  .detail { color: var(--muted); font-size: 12px; text-align: right; white-space: nowrap; padding-left: 12px; }
+  .detail { color: var(--muted); font-size: 12px; text-align: right; white-space: normal; flex: 1; min-width: 0; padding-left: 12px; }
 
   table.history {
     width: 100%;
