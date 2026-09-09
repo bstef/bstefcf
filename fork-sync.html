@@ -153,6 +153,26 @@
       gap: 8px;
     }
 
+    .section.disclosure {
+      padding: 0 24px;
+    }
+
+    .section.disclosure summary {
+      cursor: pointer;
+      list-style-position: inside;
+      padding: 22px 0;
+    }
+
+    .section.disclosure summary h2 {
+      display: inline-flex;
+      margin: 0;
+      vertical-align: middle;
+    }
+
+    .section.disclosure .repo-list {
+      padding-bottom: 13px;
+    }
+
     .badge {
       display: inline-block;
       font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -441,14 +461,18 @@
 
     <div class="tab-panel active" id="panel-latest">
       <div class="stats" id="latest-stats"></div>
-      <div class="section" id="latest-synced-section" style="display:none;">
-        <h2>Synced this run <span class="badge" id="latest-synced-badge">0</span></h2>
-        <ul class="repo-list" id="latest-synced-list"></ul>
-      </div>
-      <div class="section" id="latest-conflicts-section" style="display:none;">
-        <h2>Conflicts requiring manual resolution <span class="badge" id="latest-conflicts-badge">0</span></h2>
+      <details class="section disclosure" id="latest-conflicts-section" style="display:none;" open>
+        <summary>
+          <h2>Conflicts requiring manual resolution <span class="badge" id="latest-conflicts-badge">0</span></h2>
+        </summary>
         <ul class="repo-list" id="latest-conflicts-list"></ul>
-      </div>
+      </details>
+      <details class="section disclosure" id="latest-synced-section" style="display:none;" open>
+        <summary>
+          <h2>Synced this run <span class="badge" id="latest-synced-badge">0</span></h2>
+        </summary>
+        <ul class="repo-list" id="latest-synced-list"></ul>
+      </details>
       <div class="empty-state" id="latest-empty" style="display:none;"></div>
     </div>
 
@@ -598,16 +622,13 @@
           }
 
           var conflictRepos = latest.conflictRepos || [];
-          document.getElementById('latest-conflicts-section').style.display = '';
           document.getElementById('latest-conflicts-badge').textContent = conflictRepos.length;
           if (conflictRepos.length) {
+            document.getElementById('latest-conflicts-section').style.display = '';
             document.getElementById('latest-conflicts-list').innerHTML = conflictRepos.map(function (r) {
               return '<li><a href="https://github.com/bstef/' + encodeURIComponent(r.name) + '" target="_blank">' + escapeHtml(r.name) + '</a>' +
                 '<span class="detail">' + escapeHtml(r.note || r.detail || '') + '</span></li>';
             }).join('');
-          } else {
-            document.getElementById('latest-conflicts-list').innerHTML =
-              '<li style="border-bottom:none;"><span style="color:var(--muted);">None. All previously-flagged conflicts have been resolved.</span></li>';
           }
 
           if (latest.notes) {
