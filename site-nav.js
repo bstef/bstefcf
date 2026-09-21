@@ -7,7 +7,8 @@
     { path: "/cloudflare.html", icon: "☁️", name: "Cloudflare Dashboard", desc: "Traffic, cache & error metrics" },
     { path: "/inwood-eero-network.html", icon: "📡", name: "Eero Network Map", desc: "Interactive home network topology" },
     { path: "/volvo.html", icon: "🚗", name: "Volvo Dashboard", desc: "Controls, trips & map, fuel log, updates" },
-    { path: "/home-value.html", icon: "🏠", name: "Home Value Tracker", desc: "Property values, history & rent data" }
+    { path: "/home-value.html", icon: "🏠", name: "Home Value Tracker", desc: "Property values, history & rent data" },
+    { path: "/magic-kingdom-shade-map.html", icon: "🌤️", name: "MK Shade & Sun Map", desc: "Sun position & queue shade guide" }
   ];
 
   function currentPath() {

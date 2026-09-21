@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌤️</text></svg>">
+<link rel="stylesheet" href="/site-nav.css">
+<title>Magic Kingdom Shade &amp; Sun Map</title>
+<style>
+  :root {
+    --bg: #0b1120;
+    --grid: rgba(255,255,255,0.035);
+    --accent: #fbbf24;
+    --accent2: #38bdf8;
+    --text: #e5e7eb;
+    --muted: #94a0b3;
+    --card: #131b2e;
+    --card2: #0f1526;
+    --border: rgba(255,255,255,0.08);
+    --shaded: #34d399;
+    --mixed: #fbbf24;
+    --sunny: #fb7185;
+    --dark: #64748b;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  body {
+    background-image:
+      radial-gradient(ellipse 900px 500px at 50% -10%, rgba(251,191,36,0.10), transparent),
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: auto, 40px 40px, 40px 40px;
+    min-height: 100vh;
+    padding: 28px 20px 48px;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; }
+  header { text-align: center; margin-bottom: 30px; }
+  .tag {
+    display: inline-block;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12.5px;
+    color: var(--accent);
+    border: 1px solid rgba(251,191,36,0.3);
+    background: rgba(251,191,36,0.07);
+    padding: 5px 12px;
+    border-radius: 999px;
+    margin-bottom: 18px;
+  }
+  h1 { font-size: 32px; margin: 0 0 10px; font-weight: 800; letter-spacing: -0.02em; }
+  h1 span { color: var(--accent); }
+  p.sub { color: var(--muted); font-size: 15px; line-height: 1.6; max-width: 620px; margin: 0 auto; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+  }
+
+  .controls {
+    display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end;
+    margin-bottom: 20px;
+  }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  input[type="date"], input[type="time"] {
+    background: var(--card2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 9px 10px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-family: inherit;
+    color-scheme: dark;
+  }
+  input[type="range"] { width: 100%; accent-color: var(--accent); }
+  .btn {
+    background: rgba(251,191,36,0.12);
+    border: 1px solid rgba(251,191,36,0.35);
+    color: var(--accent);
+    padding: 9px 14px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .btn:hover { background: rgba(251,191,36,0.2); }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    background: var(--card2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 7px 12px;
+    border-radius: 999px;
+    font-size: 12.5px;
+    cursor: pointer;
+  }
+  .chip:hover { color: var(--text); border-color: rgba(255,255,255,0.2); }
+  .chip.active { color: var(--bg); background: var(--accent); border-color: var(--accent); font-weight: 700; }
+
+  .time-slider-row { display: flex; align-items: center; gap: 12px; flex: 1 1 260px; min-width: 220px; }
+  .time-readout { font-variant-numeric: tabular-nums; font-size: 14px; font-weight: 700; color: var(--accent2); min-width: 78px; text-align: right; }
+
+  .grid-2 { display: grid; grid-template-columns: 1.3fr 1fr; gap: 18px; margin-bottom: 20px; }
+  @media (max-width: 800px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .stat {
+    background: var(--card2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 14px;
+  }
+  .stat .k { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+  .stat .v { font-size: 19px; font-weight: 700; }
+  .stat .v small { font-size: 12px; color: var(--muted); font-weight: 500; }
+
+  .intensity-badge {
+    display: inline-block; padding: 4px 11px; border-radius: 999px; font-size: 12px; font-weight: 700;
+  }
+  .intensity-low { background: rgba(100,116,139,0.2); color: #94a3b8; }
+  .intensity-moderate { background: rgba(52,211,153,0.18); color: var(--shaded); }
+  .intensity-high { background: rgba(251,191,36,0.18); color: var(--mixed); }
+  .intensity-veryhigh { background: rgba(251,113,133,0.18); color: var(--sunny); }
+  .intensity-dark { background: rgba(100,116,139,0.15); color: var(--muted); }
+
+  svg text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+
+  .window-note { font-size: 13px; color: var(--muted); line-height: 1.6; margin-top: 10px; }
+  .window-note b { color: var(--text); }
+
+  .section-title { font-size: 17px; font-weight: 700; margin: 34px 0 12px; display: flex; align-items: center; gap: 8px; }
+  .section-title .n { color: var(--muted); font-weight: 500; font-size: 13px; }
+
+  .filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+
+  .land-group { margin-bottom: 22px; }
+  .land-title {
+    font-size: 13px; font-weight: 700; color: var(--accent2); text-transform: uppercase;
+    letter-spacing: 0.05em; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border);
+  }
+  .attraction-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; }
+  .attraction {
+    background: var(--card2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .attraction.hidden { display: none; }
+  .attraction .name { font-size: 14px; font-weight: 650; }
+  .badge-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .badge {
+    font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .badge.cov-full { background: rgba(52,211,153,0.15); color: var(--shaded); }
+  .badge.cov-partial { background: rgba(251,191,36,0.15); color: var(--mixed); }
+  .badge.cov-exposed { background: rgba(251,113,133,0.15); color: var(--sunny); }
+  .badge.now-shaded { background: rgba(52,211,153,0.22); color: var(--shaded); }
+  .badge.now-mixed { background: rgba(251,191,36,0.22); color: var(--mixed); }
+  .badge.now-sunny { background: rgba(251,113,133,0.22); color: var(--sunny); }
+  .badge.now-dark { background: rgba(100,116,139,0.22); color: var(--muted); }
+  .attraction .note { font-size: 12px; color: var(--muted); line-height: 1.4; }
+
+  details.methodology { margin-top: 30px; background: var(--card2); border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; }
+  details.methodology summary { cursor: pointer; font-weight: 700; font-size: 14px; }
+  details.methodology p, details.methodology ul { color: var(--muted); font-size: 13px; line-height: 1.6; }
+  details.methodology ul { padding-left: 20px; margin: 8px 0; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--muted); margin-top: 12px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div id="site-back"></div>
+
+    <header>
+      <span class="tag">☀️ bstef.pages.dev / magic-kingdom-shade-map</span>
+      <h1>Magic Kingdom <span>Shade &amp; Sun</span> Map</h1>
+      <p class="sub">Pick a date and time and see where the sun actually is over the Magic Kingdom — plus a queue-by-queue shade guide to help plan around Florida's midday sun.</p>
+    </header>
+
+    <div class="card">
+      <div class="controls">
+        <div class="field">
+          <label for="dateInput">Date</label>
+          <input type="date" id="dateInput">
+        </div>
+        <div class="time-slider-row">
+          <div class="field" style="flex:1">
+            <label for="timeSlider">Time (Orlando local)</label>
+            <input type="range" id="timeSlider" min="0" max="1439" step="5">
+          </div>
+          <div class="time-readout" id="timeReadout">--:--</div>
+        </div>
+        <button class="btn" id="nowBtn">Use right now</button>
+      </div>
+      <div class="chips" id="seasonChips"></div>
+    </div>
+
+    <div class="grid-2" style="margin-top:20px;">
+      <div class="card">
+        <div class="stat-grid" id="statGrid"></div>
+        <svg id="sunPath" viewBox="0 0 600 200" style="width:100%; height:auto; display:block;"></svg>
+        <div class="legend">
+          <span><span class="dot" style="background:var(--accent)"></span> Sun elevation</span>
+          <span><span class="dot" style="background:var(--accent2)"></span> Selected time</span>
+        </div>
+        <div class="window-note" id="windowNote"></div>
+      </div>
+      <div class="card" style="display:flex; flex-direction:column; align-items:center; justify-content:center;">
+        <svg id="compass" viewBox="0 0 220 220" style="width:100%; max-width:220px; height:auto;"></svg>
+        <div class="window-note" style="text-align:center;">Arrow points toward the sun's direction along the horizon (compass bearing).</div>
+      </div>
+    </div>
+
+    <div class="section-title">Attraction Shade Guide <span class="n" id="attractionCount"></span></div>
+    <div class="card">
+      <div class="filters" id="coverageFilters"></div>
+      <div id="attractionListMount"></div>
+    </div>
+
+    <details class="methodology">
+      <summary>How this is calculated (and its limits)</summary>
+      <p>Sun elevation, azimuth, sunrise, sunset and solar noon are computed with a standard NOAA solar-position formula for the Magic Kingdom's coordinates (28.4160°N, 81.5812°W), converted to Orlando's local clock (handles EST/EDT automatically). That part is precise astronomy.</p>
+      <p>The attraction shade ratings are a different kind of estimate. There's no public 3D model of every building, awning and tree canopy in the park, so instead each attraction gets a baseline coverage type from how its queue is generally built:</p>
+      <ul>
+        <li><b>Fully covered</b> — indoor or fully roofed queue, shaded regardless of sun position.</li>
+        <li><b>Partial shade</b> — a mix of covered sections, tree canopy, and open switchbacks.</li>
+        <li><b>Mostly exposed</b> — largely open sky with little structural shade.</li>
+      </ul>
+      <p>The "right now" estimate combines that baseline with the sun's elevation angle for your selected time (higher sun = more overhead, harder-to-avoid exposure for open queues). It does not account for a specific building or tree casting a shadow on a specific spot at a specific minute — for that, use the compass and sun-path chart above alongside a park map to reason about which side of a wall or tree line will be shaded.</p>
+      <p>Queues get rebuilt, overflow into open areas at high capacity, and attractions occasionally close for refurbishment — always confirm current layout and operating status in the My Disney Experience app or with a Cast Member.</p>
+    </details>
+
+    <div id="site-footer"></div>
+  </div>
+  <script src="/site-nav.js" defer></script>
+  <script>
+  (function () {
+    "use strict";
+
+    var MK_LAT = 28.4160;
+    var MK_LON = -81.5812;
+    var MK_TZ = "America/New_York";
+    var RAD = Math.PI / 180;
+
+    // ---------- Timezone helpers ----------
+
+    function getUtcOffsetMinutes(utcDate, timeZone) {
+      var dtf = new Intl.DateTimeFormat("en-US", { timeZone: timeZone, hour12: false, timeZoneName: "shortOffset" });
+      var parts = dtf.formatToParts(utcDate);
+      var tzPart = parts.filter(function (p) { return p.type === "timeZoneName"; })[0];
+      if (!tzPart) return 0;
+      var m = tzPart.value.match(/GMT([+-]\d+)(?::(\d+))?/);
+      if (!m) return 0;
+      var hours = parseInt(m[1], 10);
+      var mins = m[2] ? parseInt(m[2], 10) : 0;
+      return hours * 60 + (hours < 0 ? -mins : mins);
+    }
+
+    function localWallClockToUTC(dateStr, minutesOfDay) {
+      var parts = dateStr.split("-").map(Number);
+      var y = parts[0], mo = parts[1], d = parts[2];
+      var hh = Math.floor(minutesOfDay / 60), mi = minutesOfDay % 60;
+      var utcMs = Date.UTC(y, mo - 1, d, hh, mi);
+      for (var i = 0; i < 2; i++) {
+        var offsetMin = getUtcOffsetMinutes(new Date(utcMs), MK_TZ);
+        utcMs = Date.UTC(y, mo - 1, d, hh, mi) - offsetMin * 60000;
+      }
+      return new Date(utcMs);
+    }
+
+    function fmtTimeET(date) {
+      return date.toLocaleTimeString("en-US", { timeZone: MK_TZ, hour: "numeric", minute: "2-digit" });
+    }
+
+    function todayDateStrET() {
+      return new Date().toLocaleDateString("en-CA", { timeZone: MK_TZ });
+    }
+
+    function nowMinutesET() {
+      var s = new Date().toLocaleTimeString("en-GB", { timeZone: MK_TZ, hour: "2-digit", minute: "2-digit", hour12: false });
+      var parts = s.split(":").map(Number);
+      return parts[0] * 60 + parts[1];
+    }
+
+    // ---------- Solar position (NOAA algorithm) ----------
+
+    function calcSolarPosition(utcDate, lat, lon) {
+      var time = utcDate.getTime();
+      var JD = time / 86400000 + 2440587.5;
+      var T = (JD - 2451545.0) / 36525.0;
+
+      var L0 = (280.46646 + T * (36000.76983 + T * 0.0003032)) % 360;
+      if (L0 < 0) L0 += 360;
+      var M = 357.52911 + T * (35999.05029 - 0.0001537 * T);
+      var e = 0.016708634 - T * (0.000042037 + 0.0000001267 * T);
+
+      var Mrad = M * RAD;
+      var C = Math.sin(Mrad) * (1.914602 - T * (0.004817 + 0.000014 * T)) +
+              Math.sin(2 * Mrad) * (0.019993 - 0.000101 * T) +
+              Math.sin(3 * Mrad) * 0.000289;
+
+      var trueLong = L0 + C;
+      var omega = 125.04 - 1934.136 * T;
+      var appLong = trueLong - 0.00569 - 0.00478 * Math.sin(omega * RAD);
+
+      var meanObliq = 23 + (26 + (21.448 - T * (46.815 + T * (0.00059 - T * 0.001813))) / 60) / 60;
+      var obliqCorr = meanObliq + 0.00256 * Math.cos(omega * RAD);
+
+      var decl = Math.asin(Math.sin(obliqCorr * RAD) * Math.sin(appLong * RAD)) / RAD;
+
+      var y = Math.tan((obliqCorr / 2) * RAD);
+      var y2 = y * y;
+      var eqTime = 4 * (
+        y2 * Math.sin(2 * L0 * RAD) -
+        2 * e * Math.sin(Mrad) +
+        4 * e * y2 * Math.sin(Mrad) * Math.cos(2 * L0 * RAD) -
+        0.5 * y2 * y2 * Math.sin(4 * L0 * RAD) -
+        1.25 * e * e * Math.sin(2 * Mrad)
+      ) / RAD;
+
+      var utcMinutes = utcDate.getUTCHours() * 60 + utcDate.getUTCMinutes() + utcDate.getUTCSeconds() / 60;
+      var trueSolarTime = (utcMinutes + eqTime + 4 * lon) % 1440;
+      if (trueSolarTime < 0) trueSolarTime += 1440;
+
+      var hourAngle = trueSolarTime / 4 - 180;
+      if (hourAngle < -180) hourAngle += 360;
+
+      var latRad = lat * RAD, declRad = decl * RAD, haRad = hourAngle * RAD;
+      var cosZenith = Math.sin(latRad) * Math.sin(declRad) + Math.cos(latRad) * Math.cos(declRad) * Math.cos(haRad);
+      cosZenith = Math.max(-1, Math.min(1, cosZenith));
+      var zenith = Math.acos(cosZenith) / RAD;
+      var elevation = 90 - zenith;
+
+      var zenithRad = zenith * RAD;
+      var azimuth;
+      var denom = Math.cos(latRad) * Math.sin(zenithRad);
+      var azArg = denom !== 0 ? ((Math.sin(latRad) * Math.cos(zenithRad)) - Math.sin(declRad)) / denom : 0;
+      azArg = Math.max(-1, Math.min(1, azArg));
+      if (hourAngle > 0) {
+        azimuth = (Math.acos(azArg) / RAD + 180) % 360;
+      } else {
+        azimuth = (540 - (Math.acos(azArg) / RAD)) % 360;
+      }
+
+      return { elevation: elevation, azimuth: azimuth, declination: decl, eqTime: eqTime };
+    }
+
+    function computeSunTimes(dateStr, lat, lon) {
+      var refUTC = localWallClockToUTC(dateStr, 12 * 60);
+      var pos = calcSolarPosition(refUTC, lat, lon);
+      var utcMidnight = Date.UTC(refUTC.getUTCFullYear(), refUTC.getUTCMonth(), refUTC.getUTCDate());
+
+      var latRad = lat * RAD, declRad = pos.declination * RAD;
+      var zenith0 = 90.833;
+      var cosHA = (Math.cos(zenith0 * RAD) - Math.sin(latRad) * Math.sin(declRad)) / (Math.cos(latRad) * Math.cos(declRad));
+      cosHA = Math.max(-1, Math.min(1, cosHA));
+      var haSunrise = Math.acos(cosHA) / RAD;
+
+      var solarNoonMin = 720 - 4 * lon - pos.eqTime;
+      var sunriseMin = solarNoonMin - haSunrise * 4;
+      var sunsetMin = solarNoonMin + haSunrise * 4;
+
+      function minToDate(min) { return new Date(utcMidnight + min * 60000); }
+
+      return {
+        solarNoon: minToDate(solarNoonMin),
+        sunrise: minToDate(sunriseMin),
+        sunset: minToDate(sunsetMin),
+        dayLengthMin: sunsetMin - sunriseMin
+      };
+    }
+
+    function compassLabel(az) {
+      var dirs = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
+      var idx = Math.round(az / 22.5) % 16;
+      return dirs[idx];
+    }
+
+    function intensityFor(elevation) {
+      if (elevation <= 0) return { label: "After dark", cls: "dark" };
+      if (elevation < 15) return { label: "Low", cls: "low" };
+      if (elevation < 40) return { label: "Moderate", cls: "moderate" };
+      if (elevation < 65) return { label: "High", cls: "high" };
+      return { label: "Very high", cls: "veryhigh" };
+    }
+
+    // ---------- Attraction data ----------
+    // Coverage ratings are general/typical queue layout, not a survey-grade shade map. See methodology note.
+
+    var ATTRACTIONS = [
+      { land: "Adventureland", name: "Pirates of the Caribbean", coverage: "full", note: "Fully covered, mostly indoor queue and ride." },
+      { land: "Adventureland", name: "Jungle Cruise", coverage: "partial", note: "Covered queue building with a few exposed switchbacks at peak times." },
+      { land: "Adventureland", name: "Walt Disney's Enchanted Tiki Room", coverage: "full", note: "Fully covered courtyard queue." },
+      { land: "Adventureland", name: "Magic Carpets of Aladdin", coverage: "exposed", note: "Open plaza queue with little overhead cover." },
+      { land: "Adventureland", name: "Swiss Family Treehouse", coverage: "partial", note: "Shaded by mature trees, but stairs and walkway are uncovered." },
+
+      { land: "Frontierland", name: "Big Thunder Mountain Railroad", coverage: "partial", note: "Rockwork and structures give intermittent shade along the switchbacks." },
+      { land: "Frontierland", name: "Splash Mountain / Tiana's Bayou Adventure", coverage: "partial", note: "Some covered sections; much of the queue is outdoors." },
+      { land: "Frontierland", name: "Country Bear Jamboree", coverage: "full", note: "Fully covered porch queue." },
+      { land: "Frontierland", name: "Tom Sawyer Island", coverage: "exposed", note: "Raft dock line and much of the island are in open sun." },
+
+      { land: "Liberty Square", name: "Haunted Mansion", coverage: "partial", note: "Shaded by oak trees over the lawn queue; can overflow into open areas at capacity." },
+      { land: "Liberty Square", name: "Liberty Square Riverboat", coverage: "partial", note: "Covered boarding dock; the approach queue is largely open." },
+
+      { land: "Fantasyland", name: "Seven Dwarfs Mine Train", coverage: "partial", note: "Garden-lined switchbacks offer patches of tree shade mixed with open sun." },
+      { land: "Fantasyland", name: "Peter Pan's Flight", coverage: "partial", note: "Canopy covers most of the queue with some open sections near the entrance." },
+      { land: "Fantasyland", name: "Princess Fairytale Hall", coverage: "full", note: "Fully indoor queue." },
+      { land: "Fantasyland", name: "it's a small world", coverage: "partial", note: "Exposed entry plaza; covered boarding area." },
+      { land: "Fantasyland", name: "Mad Tea Party", coverage: "exposed", note: "Small open-plaza queue, minimal shade." },
+      { land: "Fantasyland", name: "Dumbo the Flying Elephant", coverage: "full", note: "Covered big-top play tent doubles as the queue." },
+      { land: "Fantasyland", name: "The Barnstormer", coverage: "exposed", note: "Short outdoor queue with little cover." },
+      { land: "Fantasyland", name: "Under the Sea: Journey of the Little Mermaid", coverage: "full", note: "Fully covered grotto queue." },
+      { land: "Fantasyland", name: "Enchanted Tales with Belle", coverage: "full", note: "Fully indoor queue." },
+      { land: "Fantasyland", name: "Mickey's PhilharMagic", coverage: "full", note: "Fully covered queue." },
+      { land: "Fantasyland", name: "Prince Charming Regal Carrousel", coverage: "partial", note: "Roofed carousel; approach queue is open-air." },
+
+      { land: "Tomorrowland", name: "Space Mountain", coverage: "full", note: "Fully covered, mostly indoor queue." },
+      { land: "Tomorrowland", name: "Buzz Lightyear Space Ranger Spin", coverage: "full", note: "Fully covered indoor queue." },
+      { land: "Tomorrowland", name: "Tomorrowland Speedway", coverage: "exposed", note: "Open trackside queue, fully exposed." },
+      { land: "Tomorrowland", name: "Astro Orbiter", coverage: "exposed", note: "Small open-plaza queue at the base of the platform." },
+      { land: "Tomorrowland", name: "Tomorrowland Transit Authority PeopleMover", coverage: "full", note: "Covered elevated queue and loading area." },
+      { land: "Tomorrowland", name: "Monsters, Inc. Laugh Floor", coverage: "full", note: "Fully indoor queue." },
+      { land: "Tomorrowland", name: "Walt Disney's Carousel of Progress", coverage: "full", note: "Mostly covered breezeway queue." }
+    ];
+
+    var COVERAGE_META = {
+      full: { label: "Fully covered", cls: "cov-full" },
+      partial: { label: "Partial shade", cls: "cov-partial" },
+      exposed: { label: "Mostly exposed", cls: "cov-exposed" }
+    };
+
+    function estimateNow(coverage, elevation) {
+      if (elevation <= 0) return { label: "After dark", cls: "now-dark" };
+      if (coverage === "full") return { label: "Shaded", cls: "now-shaded" };
+      if (coverage === "partial") {
+        if (elevation < 15) return { label: "Mostly shaded", cls: "now-shaded" };
+        if (elevation < 45) return { label: "Mixed sun & shade", cls: "now-mixed" };
+        return { label: "Limited shade", cls: "now-sunny" };
+      }
+      // exposed
+      if (elevation < 10) return { label: "Low sun, some relief", cls: "now-mixed" };
+      return { label: "Full sun exposure", cls: "now-sunny" };
+    }
+
+    // ---------- UI state ----------
+
+    var dateInput = document.getElementById("dateInput");
+    var timeSlider = document.getElementById("timeSlider");
+    var timeReadout = document.getElementById("timeReadout");
+    var nowBtn = document.getElementById("nowBtn");
+    var seasonChips = document.getElementById("seasonChips");
+    var statGrid = document.getElementById("statGrid");
+    var sunPathSvg = document.getElementById("sunPath");
+    var compassSvg = document.getElementById("compass");
+    var windowNote = document.getElementById("windowNote");
+    var coverageFilters = document.getElementById("coverageFilters");
+    var attractionListMount = document.getElementById("attractionListMount");
+    var attractionCount = document.getElementById("attractionCount");
+
+    var activeCoverageFilter = "all";
+    var year = new Date().getFullYear();
+
+    var SEASONS = [
+      { label: "Today", date: null },
+      { label: "Spring equinox", date: year + "-03-20" },
+      { label: "Summer solstice", date: year + "-06-21" },
+      { label: "Fall equinox", date: year + "-09-22" },
+      { label: "Winter solstice", date: year + "-12-21" }
+    ];
+
+    function minutesToHHMM(min) {
+      var h = Math.floor(min / 60), m = min % 60;
+      return (h < 10 ? "0" : "") + h + ":" + (m < 10 ? "0" : "") + m;
+    }
+
+    function fmtMinutesAsClock(min) {
+      var h = Math.floor(min / 60), m = min % 60;
+      var period = h >= 12 ? "PM" : "AM";
+      var h12 = h % 12; if (h12 === 0) h12 = 12;
+      return h12 + ":" + (m < 10 ? "0" : "") + m + " " + period;
+    }
+
+    function renderSeasonChips() {
+      seasonChips.innerHTML = "";
+      SEASONS.forEach(function (s) {
+        var chip = document.createElement("div");
+        chip.className = "chip";
+        chip.textContent = s.label;
+        chip.addEventListener("click", function () {
+          dateInput.value = s.date || todayDateStrET();
+          update();
+        });
+        seasonChips.appendChild(chip);
+      });
+    }
+
+    function renderCoverageFilters() {
+      var options = [
+        { key: "all", label: "All attractions" },
+        { key: "full", label: "Fully covered" },
+        { key: "partial", label: "Partial shade" },
+        { key: "exposed", label: "Mostly exposed" }
+      ];
+      coverageFilters.innerHTML = "";
+      options.forEach(function (opt) {
+        var chip = document.createElement("div");
+        chip.className = "chip" + (opt.key === activeCoverageFilter ? " active" : "");
+        chip.textContent = opt.label;
+        chip.addEventListener("click", function () {
+          activeCoverageFilter = opt.key;
+          renderCoverageFilters();
+          renderAttractions(currentElevation);
+        });
+        coverageFilters.appendChild(chip);
+      });
+    }
+
+    var currentElevation = 0;
+
+    function renderAttractions(elevation) {
+      currentElevation = elevation;
+      var lands = [];
+      var byLand = {};
+      ATTRACTIONS.forEach(function (a) {
+        if (!byLand[a.land]) { byLand[a.land] = []; lands.push(a.land); }
+        byLand[a.land].push(a);
+      });
+
+      var visibleCount = 0;
+      attractionListMount.innerHTML = "";
+      lands.forEach(function (land) {
+        var items = byLand[land].filter(function (a) {
+          return activeCoverageFilter === "all" || a.coverage === activeCoverageFilter;
+        });
+        if (items.length === 0) return;
+        visibleCount += items.length;
+
+        var group = document.createElement("div");
+        group.className = "land-group";
+        var title = document.createElement("div");
+        title.className = "land-title";
+        title.textContent = land;
+        group.appendChild(title);
+
+        var list = document.createElement("div");
+        list.className = "attraction-list";
+        items.forEach(function (a) {
+          var cov = COVERAGE_META[a.coverage];
+          var now = estimateNow(a.coverage, elevation);
+          var card = document.createElement("div");
+          card.className = "attraction";
+          card.innerHTML =
+            '<div class="name">' + a.name + '</div>' +
+            '<div class="badge-row">' +
+              '<span class="badge ' + cov.cls + '">' + cov.label + '</span>' +
+              '<span class="badge ' + now.cls + '">' + now.label + '</span>' +
+            '</div>' +
+            '<div class="note">' + a.note + '</div>';
+          list.appendChild(card);
+        });
+        group.appendChild(list);
+        attractionListMount.appendChild(group);
+      });
+
+      attractionCount.textContent = "(" + visibleCount + " of " + ATTRACTIONS.length + ")";
+    }
+
+    function renderStats(dateStr, minutesOfDay, pos, times) {
+      var intensity = intensityFor(pos.elevation);
+      var dayLenTotalMin = Math.round(times.dayLengthMin);
+      var dayLenH = Math.floor(dayLenTotalMin / 60);
+      var dayLenM = dayLenTotalMin % 60;
+
+      statGrid.innerHTML =
+        stat("Sun elevation", (pos.elevation > 0 ? pos.elevation.toFixed(1) + "°" : "below horizon")) +
+        stat("Sun direction", pos.azimuth.toFixed(0) + "° <small>" + compassLabel(pos.azimuth) + "</small>") +
+        stat("Sunrise", fmtTimeET(times.sunrise)) +
+        stat("Sunset", fmtTimeET(times.sunset)) +
+        stat("Solar noon", fmtTimeET(times.solarNoon)) +
+        stat("Day length", dayLenH + "h " + dayLenM + "m") +
+        ('<div class="stat"><div class="k">Sun intensity</div><div class="v"><span class="intensity-badge intensity-' + intensity.cls + '">' + intensity.label + '</span></div></div>');
+    }
+
+    function stat(k, v) {
+      return '<div class="stat"><div class="k">' + k + '</div><div class="v">' + v + '</div></div>';
+    }
+
+    function renderSunPath(dateStr) {
+      var W = 600, H = 200, padL = 34, padR = 10, padT = 14, padB = 22;
+      var startMin = 6 * 60, endMin = 23 * 60; // 6:00 - 23:00
+      var samples = [];
+      var maxElev = 5;
+      for (var t = startMin; t <= endMin; t += 10) {
+        var utc = localWallClockToUTC(dateStr, t);
+        var pos = calcSolarPosition(utc, MK_LAT, MK_LON);
+        samples.push({ t: t, elev: pos.elevation });
+        if (pos.elevation > maxElev) maxElev = pos.elevation;
+      }
+      maxElev = Math.ceil((maxElev + 5) / 10) * 10;
+
+      function x(t) { return padL + (t - startMin) / (endMin - startMin) * (W - padL - padR); }
+      function y(e) { return H - padB - (Math.max(e, 0) / maxElev) * (H - padT - padB); }
+
+      var pathD = samples.map(function (s, i) {
+        return (i === 0 ? "M" : "L") + x(s.t).toFixed(1) + "," + y(s.elev).toFixed(1);
+      }).join(" ");
+
+      var zeroY = y(0);
+
+      var hourLines = "";
+      for (var h = 6; h <= 23; h += 3) {
+        var hx = x(h * 60);
+        var label = h > 12 ? (h - 12) + "p" : (h === 12 ? "12p" : h + "a");
+        hourLines += '<line x1="' + hx + '" y1="' + padT + '" x2="' + hx + '" y2="' + zeroY + '" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>';
+        hourLines += '<text x="' + hx + '" y="' + (H - 6) + '" fill="var(--muted)" font-size="10" text-anchor="middle">' + label + '</text>';
+      }
+
+      sunPathSvg.innerHTML =
+        '<line x1="' + padL + '" y1="' + zeroY + '" x2="' + (W - padR) + '" y2="' + zeroY + '" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>' +
+        hourLines +
+        '<path d="' + pathD + '" fill="none" stroke="var(--accent)" stroke-width="2.5"/>';
+
+      return { x: x, y: y, startMin: startMin, endMin: endMin };
+    }
+
+    function markSunPath(scale, minutesOfDay, elevation) {
+      if (minutesOfDay < scale.startMin || minutesOfDay > scale.endMin) return;
+      var cx = scale.x(minutesOfDay), cy = scale.y(Math.max(elevation, 0));
+      var marker = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      marker.setAttribute("cx", cx);
+      marker.setAttribute("cy", cy);
+      marker.setAttribute("r", 5);
+      marker.setAttribute("fill", "var(--accent2)");
+      marker.setAttribute("stroke", "#0b1120");
+      marker.setAttribute("stroke-width", "2");
+      sunPathSvg.appendChild(marker);
+    }
+
+    function renderCompass(azimuth, elevation) {
+      var cx = 110, cy = 110, r = 90;
+      var dirs = [
+        { a: 0, l: "N" }, { a: 90, l: "E" }, { a: 180, l: "S" }, { a: 270, l: "W" }
+      ];
+      var dirLabels = dirs.map(function (d) {
+        var rad = (d.a - 90) * RAD;
+        var lx = cx + (r + 14) * Math.cos(rad);
+        var ly = cy + (r + 14) * Math.sin(rad);
+        return '<text x="' + lx + '" y="' + (ly + 4) + '" fill="var(--muted)" font-size="13" font-weight="700" text-anchor="middle">' + d.l + '</text>';
+      }).join("");
+
+      var below = elevation <= 0;
+      var needleColor = below ? "var(--dark)" : "var(--accent)";
+      var rad = (azimuth - 90) * RAD;
+      var tipX = cx + (r - 18) * Math.cos(rad);
+      var tipY = cy + (r - 18) * Math.sin(rad);
+      var baseAngle1 = rad + Math.PI * 0.88;
+      var baseAngle2 = rad - Math.PI * 0.88;
+      var bx1 = cx + 10 * Math.cos(baseAngle1), by1 = cy + 10 * Math.sin(baseAngle1);
+      var bx2 = cx + 10 * Math.cos(baseAngle2), by2 = cy + 10 * Math.sin(baseAngle2);
+
+      compassSvg.innerHTML =
+        '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="1.5"/>' +
+        '<circle cx="' + cx + '" cy="' + cy + '" r="' + (r * 0.5) + '" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>' +
+        dirLabels +
+        '<polygon points="' + tipX.toFixed(1) + ',' + tipY.toFixed(1) + ' ' + bx1.toFixed(1) + ',' + by1.toFixed(1) + ' ' + bx2.toFixed(1) + ',' + by2.toFixed(1) + '" fill="' + needleColor + '"/>' +
+        '<circle cx="' + cx + '" cy="' + cy + '" r="4" fill="' + needleColor + '"/>';
+    }
+
+    function computeLowSunWindows(dateStr, threshold) {
+      var startMin = 8 * 60, endMin = 22 * 60;
+      var prev = null;
+      var crossings = [];
+      for (var t = startMin; t <= endMin; t += 2) {
+        var utc = localWallClockToUTC(dateStr, t);
+        var elev = calcSolarPosition(utc, MK_LAT, MK_LON).elevation;
+        if (prev !== null) {
+          if (prev.elev < threshold && elev >= threshold) crossings.push({ t: t, type: "up" });
+          if (prev.elev >= threshold && elev < threshold) crossings.push({ t: t, type: "down" });
+        }
+        prev = { t: t, elev: elev };
+      }
+      return crossings;
+    }
+
+    function renderWindowNote(dateStr) {
+      var threshold = 30;
+      var crossings = computeLowSunWindows(dateStr, threshold);
+      var text;
+      if (crossings.length === 0) {
+        var midUtc = localWallClockToUTC(dateStr, 13 * 60);
+        var midElev = calcSolarPosition(midUtc, MK_LAT, MK_LON).elevation;
+        text = midElev >= threshold
+          ? "The sun stays high (above " + threshold + "°) for most of the day — exposed queues get full sun nearly all day."
+          : "The sun stays relatively low (under " + threshold + "°) all day — exposed queues get some relief even at midday.";
+      } else {
+        var up = crossings.filter(function (c) { return c.type === "up"; })[0];
+        var down = crossings.slice().reverse().filter(function (c) { return c.type === "down"; })[0];
+        var parts = [];
+        if (up) parts.push("before " + fmtMinutesAsClock(up.t));
+        if (down) parts.push("after " + fmtMinutesAsClock(down.t));
+        text = "Best time for exposed attractions today: <b>" + parts.join(" or ") + "</b> (sun stays under " + threshold + "° elevation).";
+      }
+      windowNote.innerHTML = text;
+    }
+
+    function update() {
+      var dateStr = dateInput.value || todayDateStrET();
+      var minutesOfDay = parseInt(timeSlider.value, 10);
+      timeReadout.textContent = fmtMinutesAsClock(minutesOfDay);
+
+      var utc = localWallClockToUTC(dateStr, minutesOfDay);
+      var pos = calcSolarPosition(utc, MK_LAT, MK_LON);
+      var times = computeSunTimes(dateStr, MK_LAT, MK_LON);
+
+      renderStats(dateStr, minutesOfDay, pos, times);
+      var scale = renderSunPath(dateStr);
+      markSunPath(scale, minutesOfDay, pos.elevation);
+      renderCompass(pos.azimuth, pos.elevation);
+      renderWindowNote(dateStr);
+      renderAttractions(pos.elevation);
+    }
+
+    function init() {
+      dateInput.value = todayDateStrET();
+      timeSlider.value = Math.min(Math.max(nowMinutesET(), 0), 1439);
+      renderSeasonChips();
+      renderCoverageFilters();
+
+      dateInput.addEventListener("change", update);
+      timeSlider.addEventListener("input", update);
+      nowBtn.addEventListener("click", function () {
+        dateInput.value = todayDateStrET();
+        timeSlider.value = nowMinutesET();
+        update();
+      });
+
+      update();
+    }
+
+    init();
+  })();
+  </script>
+</body>
+</html>

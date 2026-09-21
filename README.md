@@ -21,6 +21,7 @@ Cloudflare Pages deploys this repository automatically from `main`. There is no 
 | `inwood-eero-network.html` | Interactive home network topology |
 | `volvo.html` | Volvo dashboard — vehicle status, controls, trips, map, fuel tracking and updates |
 | `home-value.html` | Private Home Value Tracker — family properties, valuations, rent data, taxes and value-history charts |
+| `magic-kingdom-shade-map.html` | Magic Kingdom sun position calculator and queue shade guide, by date/time of year |
 
 ## Adding a new page
 
