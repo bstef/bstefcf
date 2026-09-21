@@ -42,6 +42,21 @@ Cloudflare Pages deploys this repository automatically from `main`. There is no 
 | `<div id="site-back"></div>` | Back-to-home link on app pages |
 | `<div id="site-footer"></div>` | Links to the other apps plus site/source links |
 
+## Map basemap key
+
+CARTO began enforcing API keys on `basemaps.cartocdn.com` in August 2026; unkeyed tiles render an "API KEY REQUIRED" watermark. Pages using a CARTO basemap pass a free [CARTO Basemaps key](https://carto.com/basemaps/apikey/) as `?key=` on the tile URL.
+
+Unlike the Pages secrets below, this key is **not** a server-side secret: browsers request tiles directly, so it is visible in page source and network requests by design (same model as a Mapbox public token). It is rate limited to 5M tile requests/month rather than granting account access.
+
+It is defined as a `CARTO_KEY` constant in each page that needs it, so rotating it means updating both:
+
+| File | Usage |
+| --- | --- |
+| `magic-kingdom-shade-map.html` | Dark basemap under the shadow map |
+| `volvo.html` | Dark basemap for the trips map (light theme uses OpenStreetMap tiles) |
+
+Keys are managed at [dashboard.basemaps.carto.com/keys](https://dashboard.basemaps.carto.com/keys).
+
 ## Home Value Tracker
 
 `home-value.html` is a personal real-estate dashboard for a small set of family properties. The current UI includes:

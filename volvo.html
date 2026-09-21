@@ -1401,10 +1401,15 @@
 
     // ---- Trips & Map ----
 
+    // CARTO started enforcing API keys on basemap tiles in August 2026; without one
+    // every tile carries an "API KEY REQUIRED" watermark. This is a public, rate-limited
+    // basemap key, exposed in tile requests by design like a Mapbox public token.
+    var CARTO_KEY = "cb1_2itn_1_e48b69c936ee97b064518b2c";
+
     function setTileLayer() {
       if (state.map._tileLayer) state.map.removeLayer(state.map._tileLayer);
       var url = state.theme === "dark"
-        ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+        ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=" + CARTO_KEY
         : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
       state.map._tileLayer = L.tileLayer(url, {
         maxZoom: 19,
