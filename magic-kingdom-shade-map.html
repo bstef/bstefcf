@@ -739,6 +739,12 @@
 
     // ---------- Shadow map ----------
 
+    // CARTO started enforcing API keys on basemap tiles in August 2026; without one
+    // every tile carries an "API KEY REQUIRED" watermark. This is a public, rate-limited
+    // basemap key, exposed in tile requests by design like a Mapbox public token.
+    var CARTO_KEY = "cb1_2itn_1_e48b69c936ee97b064518b2c";
+    var CARTO_TILE_URL = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=" + CARTO_KEY;
+
     var MK_CENTER = [28.4177, -81.5812];
     var DEFAULT_BUILDING_HEIGHT_M = 7;
     var MIN_SHADOW_ELEVATION_DEG = 3;   // below this, shadows run off to the horizon
@@ -929,7 +935,7 @@
       }
 
       mapState.map = L.map("map", { zoomControl: true, scrollWheelZoom: false }).setView(MK_CENTER, 16);
-      L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+      L.tileLayer(CARTO_TILE_URL, {
         maxZoom: 19,
         attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
       }).addTo(mapState.map);
