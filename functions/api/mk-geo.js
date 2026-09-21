@@ -3,10 +3,17 @@
 
 const MK_BBOX = "28.4140,-81.5870,28.4240,-81.5750";
 const CACHE_TTL_SECONDS = 604800; // 7 days
+const SNAPSHOT_TTL_SECONDS = 31536000; // 1 year
+
+// Public Overpass instances rate limit per IP, and Cloudflare egress IPs are shared
+// with other tenants, so any single endpoint can return 429 or be down entirely.
+// Every instance is tried before giving up.
 const OVERPASS_ENDPOINTS = [
   "https://overpass-api.de/api/interpreter",
-  "https://overpass.kumi.systems/api/interpreter"
+  "https://overpass.kumi.systems/api/interpreter",
+  "https://overpass.private.coffee/api/interpreter"
 ];
+const ENDPOINT_TIMEOUT_MS = 20000;
 
 const QUERY = `[out:json][timeout:60];
 (
@@ -102,27 +109,33 @@ async function queryOverpass() {
   const errors = [];
 
   for (const endpoint of OVERPASS_ENDPOINTS) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), ENDPOINT_TIMEOUT_MS);
     try {
       const response = await fetch(endpoint, {
         method: "POST",
         headers: { "content-type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({ data: QUERY })
+        body: new URLSearchParams({ data: QUERY }),
+        signal: controller.signal
       });
 
       if (!response.ok) {
-        errors.push(`${endpoint} responded ${response.status}`);
+        errors.push(`${new URL(endpoint).host} responded ${response.status}`);
         continue;
       }
 
       const payload = await response.json();
       if (!payload || !Array.isArray(payload.elements)) {
-        errors.push(`${endpoint} returned an unexpected payload`);
+        errors.push(`${new URL(endpoint).host} returned an unexpected payload`);
         continue;
       }
 
       return payload.elements;
     } catch (error) {
-      errors.push(`${endpoint} failed: ${error.message}`);
+      const reason = error.name === "AbortError" ? `timed out after ${ENDPOINT_TIMEOUT_MS}ms` : error.message;
+      errors.push(`${new URL(endpoint).host} failed: ${reason}`);
+    } finally {
+      clearTimeout(timer);
     }
   }
 
@@ -137,6 +150,12 @@ export async function onRequestGet(context) {
   const requestUrl = new URL(request.url);
   const cacheKey = new Request(requestUrl.origin + requestUrl.pathname, { method: "GET" });
 
+  // Every Overpass instance can be down or rate limiting at once, so the last good
+  // payload is kept for a year under its own key and served if a refresh fails.
+  const snapshotKey = new Request(`${requestUrl.origin}${requestUrl.pathname}?snapshot=last-good`, {
+    method: "GET"
+  });
+
   const cached = await cache.match(cacheKey);
   if (cached) return cached;
 
@@ -144,24 +163,50 @@ export async function onRequestGet(context) {
   try {
     elements = await queryOverpass();
   } catch (error) {
-    return json({ error: `Could not load OpenStreetMap data: ${error.message}` }, 502, {
-      "cache-control": "no-store"
-    });
+    const snapshot = await cache.match(snapshotKey);
+    if (snapshot) {
+      const headers = new Headers(snapshot.headers);
+      headers.set("cache-control", "public, max-age=300");
+      headers.set("x-mk-geo-source", "snapshot");
+      return new Response(snapshot.body, { status: 200, headers });
+    }
+    return json(
+      {
+        error: "OpenStreetMap data is temporarily unavailable.",
+        detail: error.message
+      },
+      502,
+      { "cache-control": "no-store" }
+    );
   }
 
   const { attractions, buildings } = normalize(elements);
-  const response = json(
-    {
-      source: "OpenStreetMap contributors (ODbL)",
-      bbox: MK_BBOX,
-      fetchedAt: new Date().toISOString(),
-      attractions,
-      buildings
-    },
-    200,
-    { "cache-control": `public, max-age=3600, s-maxage=${CACHE_TTL_SECONDS}` }
-  );
+  const body = JSON.stringify({
+    source: "OpenStreetMap contributors (ODbL)",
+    bbox: MK_BBOX,
+    fetchedAt: new Date().toISOString(),
+    attractions,
+    buildings
+  });
+
+  const response = new Response(body, {
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": `public, max-age=3600, s-maxage=${CACHE_TTL_SECONDS}`
+    }
+  });
 
   waitUntil(cache.put(cacheKey, response.clone()));
+  waitUntil(
+    cache.put(
+      snapshotKey,
+      new Response(body, {
+        headers: {
+          "content-type": "application/json; charset=utf-8",
+          "cache-control": `public, max-age=${SNAPSHOT_TTL_SECONDS}`
+        }
+      })
+    )
+  );
   return response;
 }
