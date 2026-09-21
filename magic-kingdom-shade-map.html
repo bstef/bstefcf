@@ -199,7 +199,7 @@
         </div>
         <div class="time-slider-row">
           <div class="field" style="flex:1">
-            <label for="timeInput">Time (Orlando local)</label>
+            <label for="timeSlider">Time (Orlando local)</label>
             <input type="range" id="timeSlider" min="0" max="1439" step="5">
           </div>
           <div class="time-readout" id="timeReadout">--:--</div>
@@ -581,8 +581,9 @@
 
     function renderStats(dateStr, minutesOfDay, pos, times) {
       var intensity = intensityFor(pos.elevation);
-      var dayLenH = Math.floor(times.dayLengthMin / 60);
-      var dayLenM = Math.round(times.dayLengthMin % 60);
+      var dayLenTotalMin = Math.round(times.dayLengthMin);
+      var dayLenH = Math.floor(dayLenTotalMin / 60);
+      var dayLenM = dayLenTotalMin % 60;
 
       statGrid.innerHTML =
         stat("Sun elevation", (pos.elevation > 0 ? pos.elevation.toFixed(1) + "°" : "below horizon")) +
