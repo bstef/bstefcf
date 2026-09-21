@@ -754,6 +754,13 @@
       redrawTimer: null
     };
 
+    // OSM names are public, editable data, so they are never trusted as markup.
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, function (ch) {
+        return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch];
+      });
+    }
+
     function normalizeName(name) {
       return name
         .toLowerCase()
@@ -881,7 +888,7 @@
           icon: L.divIcon({ className: "", html: '<div class="pin ' + cls + '"></div>', iconSize: [14, 14], iconAnchor: [7, 7] })
         });
 
-        var popup = "<b>" + osm.name + "</b>";
+        var popup = "<b>" + escapeHtml(osm.name) + "</b>";
         if (match) {
           var now = estimateNow(match.coverage, elevation);
           popup += "<br>" + COVERAGE_META[match.coverage].label + " · " + now.label + "<br><span style='color:#94a0b3'>" + match.note + "</span>";

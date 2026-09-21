@@ -73,6 +73,8 @@ function normalize(elements) {
   for (const element of elements) {
     const tags = element.tags || {};
 
+    // A way can be both an attraction and a building, so these are not exclusive:
+    // show buildings still need their footprint for the shadow layer.
     if (tags.tourism === "attraction" && tags.name) {
       if (element.type === "node" && typeof element.lat === "number") {
         attractions.push({ name: tags.name, lat: round6(element.lat), lon: round6(element.lon) });
@@ -80,7 +82,6 @@ function normalize(elements) {
         const center = centroidOf(element.geometry);
         attractions.push({ name: tags.name, lat: round6(center.lat), lon: round6(center.lon) });
       }
-      continue;
     }
 
     if (tags.building && element.geometry && element.geometry.length >= 3) {
@@ -131,7 +132,10 @@ async function queryOverpass() {
 export async function onRequestGet(context) {
   const { request, waitUntil } = context;
   const cache = caches.default;
-  const cacheKey = new Request(new URL(request.url).toString(), { method: "GET" });
+  // The dataset is fixed, so the key ignores the query string: otherwise any
+  // ?bust=… link would miss the cache and re-run the Overpass query.
+  const requestUrl = new URL(request.url);
+  const cacheKey = new Request(requestUrl.origin + requestUrl.pathname, { method: "GET" });
 
   const cached = await cache.match(cacheKey);
   if (cached) return cached;
