@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌤️</text></svg>">
 <link rel="stylesheet" href="/site-nav.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 <title>Magic Kingdom Shade &amp; Sun Map</title>
 <style>
   :root {
@@ -171,6 +173,41 @@
   .badge.now-dark { background: rgba(100,116,139,0.22); color: var(--muted); }
   .attraction .note { font-size: 12px; color: var(--muted); line-height: 1.4; }
 
+  #map {
+    height: 520px;
+    border-radius: 12px;
+    background: var(--card2);
+    z-index: 0;
+  }
+  @media (max-width: 640px) { #map { height: 380px; } }
+  .leaflet-container { font-family: inherit; background: var(--card2); }
+  .leaflet-popup-content-wrapper, .leaflet-popup-tip {
+    background: var(--card); color: var(--text); border: 1px solid var(--border);
+  }
+  .leaflet-popup-content { margin: 10px 12px; font-size: 13px; line-height: 1.5; }
+  .leaflet-popup-content b { font-size: 13.5px; }
+  .leaflet-bar a, .leaflet-bar a:hover { background: var(--card); color: var(--text); border-color: var(--border); }
+  .leaflet-control-attribution {
+    background: rgba(11,17,32,0.85) !important; color: var(--muted) !important; font-size: 10px;
+  }
+  .leaflet-control-attribution a { color: var(--accent2) !important; }
+
+  .map-toolbar { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; margin-bottom: 12px; }
+  .toggle { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; color: var(--muted); cursor: pointer; }
+  .toggle input { accent-color: var(--accent); width: 15px; height: 15px; cursor: pointer; }
+  .map-status { font-size: 12.5px; color: var(--muted); margin-left: auto; }
+  .map-status.error { color: var(--sunny); }
+
+  .pin {
+    width: 14px; height: 14px; border-radius: 50%;
+    border: 2px solid rgba(11,17,32,0.85);
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.25);
+  }
+  .pin-full { background: var(--shaded); }
+  .pin-partial { background: var(--mixed); }
+  .pin-exposed { background: var(--sunny); }
+  .pin-other { background: var(--dark); }
+
   details.methodology { margin-top: 30px; background: var(--card2); border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; }
   details.methodology summary { cursor: pointer; font-weight: 700; font-size: 14px; }
   details.methodology p, details.methodology ul { color: var(--muted); font-size: 13px; line-height: 1.6; }
@@ -225,6 +262,24 @@
       </div>
     </div>
 
+    <div class="section-title">Live Shadow Map <span class="n">building shadows cast for the selected time</span></div>
+    <div class="card">
+      <div class="map-toolbar">
+        <label class="toggle"><input type="checkbox" id="toggleShadows" checked> Building shadows</label>
+        <label class="toggle"><input type="checkbox" id="toggleBuildings" checked> Building outlines</label>
+        <label class="toggle"><input type="checkbox" id="togglePins" checked> Attraction pins</label>
+        <span class="map-status" id="mapStatus">Loading map data…</span>
+      </div>
+      <div id="map"></div>
+      <div class="legend">
+        <span><span class="dot pin-full" style="width:9px;height:9px;border:0;box-shadow:none;"></span> Fully covered queue</span>
+        <span><span class="dot pin-partial" style="width:9px;height:9px;border:0;box-shadow:none;"></span> Partial shade</span>
+        <span><span class="dot pin-exposed" style="width:9px;height:9px;border:0;box-shadow:none;"></span> Mostly exposed</span>
+        <span><span class="dot pin-other" style="width:9px;height:9px;border:0;box-shadow:none;"></span> Other mapped attraction</span>
+      </div>
+      <div class="window-note">Shadows are projected from OpenStreetMap building footprints using the selected sun angle. Buildings tagged with a height or floor count in OSM use it; the rest fall back to an assumed 7 m, so treat those shadows as indicative rather than exact. Tree canopy is not modeled.</div>
+    </div>
+
     <div class="section-title">Attraction Shade Guide <span class="n" id="attractionCount"></span></div>
     <div class="card">
       <div class="filters" id="coverageFilters"></div>
@@ -247,6 +302,8 @@
     <div id="site-footer"></div>
   </div>
   <script src="/site-nav.js" defer></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <script>
   (function () {
     "use strict";
@@ -680,6 +737,225 @@
         '<circle cx="' + cx + '" cy="' + cy + '" r="4" fill="' + needleColor + '"/>';
     }
 
+    // ---------- Shadow map ----------
+
+    var MK_CENTER = [28.4177, -81.5812];
+    var DEFAULT_BUILDING_HEIGHT_M = 7;
+    var MIN_SHADOW_ELEVATION_DEG = 3;   // below this, shadows run off to the horizon
+    var MAX_SHADOW_LENGTH_M = 400;
+    var METRES_PER_DEG_LAT = 111320;
+
+    var mapState = {
+      map: null,
+      geo: null,
+      buildingLayer: null,
+      shadowLayer: null,
+      pinLayer: null,
+      redrawTimer: null
+    };
+
+    // OSM names are public, editable data, so they are never trusted as markup.
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, function (ch) {
+        return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch];
+      });
+    }
+
+    function normalizeName(name) {
+      return name
+        .toLowerCase()
+        .replace(/^walt disney's\s+/, "")
+        .replace(/^mickey's\s+/, "")
+        .replace(/^the\s+/, "")
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim();
+    }
+
+    function matchAttraction(osmName) {
+      var target = normalizeName(osmName);
+      if (!target) return null;
+      for (var i = 0; i < ATTRACTIONS.length; i++) {
+        var candidate = normalizeName(ATTRACTIONS[i].name);
+        if (candidate === target) return ATTRACTIONS[i];
+        // Handles "Splash Mountain / Tiana's Bayou Adventure" vs either half.
+        if (candidate.indexOf(target) !== -1 || target.indexOf(candidate) !== -1) return ATTRACTIONS[i];
+      }
+      return null;
+    }
+
+    // Monotone chain hull over [x, y] pairs.
+    function convexHull(points) {
+      if (points.length < 4) return points.slice();
+      var sorted = points.slice().sort(function (a, b) {
+        return a[0] === b[0] ? a[1] - b[1] : a[0] - b[0];
+      });
+      function cross(o, a, b) {
+        return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+      }
+      var lower = [];
+      for (var i = 0; i < sorted.length; i++) {
+        while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], sorted[i]) <= 0) lower.pop();
+        lower.push(sorted[i]);
+      }
+      var upper = [];
+      for (var j = sorted.length - 1; j >= 0; j--) {
+        while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], sorted[j]) <= 0) upper.pop();
+        upper.push(sorted[j]);
+      }
+      lower.pop();
+      upper.pop();
+      return lower.concat(upper);
+    }
+
+    function buildingShadow(coords, heightM, elevationDeg, azimuthDeg) {
+      var length = heightM / Math.tan(elevationDeg * RAD);
+      if (!isFinite(length) || length <= 0) return null;
+      length = Math.min(length, MAX_SHADOW_LENGTH_M);
+
+      var bearing = (azimuthDeg + 180) % 360;
+      var dLat = (length * Math.cos(bearing * RAD)) / METRES_PER_DEG_LAT;
+      var dLon = (length * Math.sin(bearing * RAD)) / (METRES_PER_DEG_LAT * Math.cos(coords[0][0] * RAD));
+
+      var points = [];
+      for (var i = 0; i < coords.length; i++) {
+        points.push([coords[i][1], coords[i][0]]);
+        points.push([coords[i][1] + dLon, coords[i][0] + dLat]);
+      }
+      return convexHull(points).map(function (p) { return [p[1], p[0]]; });
+    }
+
+    function drawShadows(elevation, azimuth) {
+      if (!mapState.map || !mapState.geo) return;
+      if (mapState.shadowLayer) {
+        mapState.map.removeLayer(mapState.shadowLayer);
+        mapState.shadowLayer = null;
+      }
+      if (!document.getElementById("toggleShadows").checked) return;
+      if (elevation < MIN_SHADOW_ELEVATION_DEG) return;
+
+      var rings = [];
+      mapState.geo.buildings.forEach(function (building) {
+        var height = building.height || DEFAULT_BUILDING_HEIGHT_M;
+        var shadow = buildingShadow(building.coords, height, elevation, azimuth);
+        if (shadow && shadow.length >= 3) rings.push([shadow]);
+      });
+      if (!rings.length) return;
+
+      mapState.shadowLayer = L.polygon(rings, {
+        stroke: false,
+        fillColor: "#020617",
+        fillOpacity: 0.45,
+        interactive: false
+      }).addTo(mapState.map);
+
+      if (mapState.buildingLayer) mapState.buildingLayer.bringToFront();
+      if (mapState.pinLayer) mapState.pinLayer.bringToFront();
+    }
+
+    function drawBuildings() {
+      if (!mapState.map || !mapState.geo) return;
+      if (mapState.buildingLayer) {
+        mapState.map.removeLayer(mapState.buildingLayer);
+        mapState.buildingLayer = null;
+      }
+      if (!document.getElementById("toggleBuildings").checked) return;
+
+      var rings = mapState.geo.buildings.map(function (b) { return [b.coords]; });
+      if (!rings.length) return;
+
+      mapState.buildingLayer = L.polygon(rings, {
+        color: "rgba(148,160,179,0.55)",
+        weight: 1,
+        fillColor: "#1e293b",
+        fillOpacity: 0.35,
+        interactive: false
+      }).addTo(mapState.map);
+    }
+
+    function drawPins(elevation) {
+      if (!mapState.map || !mapState.geo) return;
+      if (mapState.pinLayer) {
+        mapState.map.removeLayer(mapState.pinLayer);
+        mapState.pinLayer = null;
+      }
+      if (!document.getElementById("togglePins").checked) return;
+
+      var markers = [];
+      mapState.geo.attractions.forEach(function (osm) {
+        var match = matchAttraction(osm.name);
+        var cls = match ? "pin-" + match.coverage : "pin-other";
+        var marker = L.marker([osm.lat, osm.lon], {
+          icon: L.divIcon({ className: "", html: '<div class="pin ' + cls + '"></div>', iconSize: [14, 14], iconAnchor: [7, 7] })
+        });
+
+        var popup = "<b>" + escapeHtml(osm.name) + "</b>";
+        if (match) {
+          var now = estimateNow(match.coverage, elevation);
+          popup += "<br>" + COVERAGE_META[match.coverage].label + " · " + now.label + "<br><span style='color:#94a0b3'>" + match.note + "</span>";
+        } else {
+          popup += "<br><span style='color:#94a0b3'>Mapped in OpenStreetMap; not in the shade guide.</span>";
+        }
+        marker.bindPopup(popup);
+        markers.push(marker);
+      });
+
+      if (!markers.length) return;
+      mapState.pinLayer = L.layerGroup(markers).addTo(mapState.map);
+    }
+
+    function refreshMapLayers(elevation, azimuth) {
+      drawShadows(elevation, azimuth);
+      drawBuildings();
+      drawPins(elevation);
+    }
+
+    function scheduleMapRedraw(elevation, azimuth) {
+      if (mapState.redrawTimer) clearTimeout(mapState.redrawTimer);
+      mapState.redrawTimer = setTimeout(function () {
+        refreshMapLayers(elevation, azimuth);
+      }, 90);
+    }
+
+    function setMapStatus(message, isError) {
+      var el = document.getElementById("mapStatus");
+      el.textContent = message;
+      el.className = "map-status" + (isError ? " error" : "");
+    }
+
+    function initMap() {
+      if (typeof L === "undefined") {
+        setMapStatus("Map library failed to load.", true);
+        return;
+      }
+
+      mapState.map = L.map("map", { zoomControl: true, scrollWheelZoom: false }).setView(MK_CENTER, 16);
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
+      }).addTo(mapState.map);
+
+      ["toggleShadows", "toggleBuildings", "togglePins"].forEach(function (id) {
+        document.getElementById(id).addEventListener("change", update);
+      });
+
+      fetch("/api/mk-geo")
+        .then(function (res) { return res.json().then(function (body) { return { ok: res.ok, body: body }; }); })
+        .then(function (result) {
+          if (!result.ok || result.body.error) throw new Error(result.body.error || "Request failed");
+          mapState.geo = result.body;
+          var withHeight = mapState.geo.buildings.filter(function (b) { return b.height; }).length;
+          setMapStatus(
+            mapState.geo.buildings.length + " buildings (" + withHeight + " with mapped heights) · " +
+            mapState.geo.attractions.length + " attractions from OpenStreetMap",
+            false
+          );
+          update();
+        })
+        .catch(function (error) {
+          setMapStatus("Could not load OpenStreetMap data: " + error.message, true);
+        });
+    }
+
     function computeLowSunWindows(dateStr, threshold) {
       var startMin = 8 * 60, endMin = 22 * 60;
       var prev = null;
@@ -732,6 +1008,7 @@
       renderCompass(pos.azimuth, pos.elevation);
       renderWindowNote(dateStr);
       renderAttractions(pos.elevation);
+      scheduleMapRedraw(pos.elevation, pos.azimuth);
     }
 
     function init() {
@@ -749,6 +1026,7 @@
       });
 
       update();
+      initMap();
     }
 
     init();
