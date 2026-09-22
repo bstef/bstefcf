@@ -197,6 +197,17 @@
   .toggle input { accent-color: var(--accent); width: 15px; height: 15px; cursor: pointer; }
   .map-status { font-size: 12.5px; color: var(--muted); margin-left: auto; }
   .map-status.error { color: var(--sunny); }
+  .retry-btn {
+    background: rgba(251,191,36,0.12);
+    border: 1px solid rgba(251,191,36,0.35);
+    color: var(--accent);
+    padding: 2px 9px;
+    border-radius: 999px;
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .retry-btn:hover { background: rgba(251,191,36,0.22); }
 
   .pin {
     width: 14px; height: 14px; border-radius: 50%;
@@ -922,10 +933,24 @@
       }, 90);
     }
 
-    function setMapStatus(message, isError) {
+    function setMapStatus(message, isError, detail) {
       var el = document.getElementById("mapStatus");
       el.textContent = message;
       el.className = "map-status" + (isError ? " error" : "");
+      if (detail) el.title = detail; else el.removeAttribute("title");
+    }
+
+    function setMapError(message, detail) {
+      var el = document.getElementById("mapStatus");
+      setMapStatus(message + " ", true, detail);
+      var retry = document.createElement("button");
+      retry.className = "retry-btn";
+      retry.textContent = "Retry";
+      retry.addEventListener("click", function () {
+        setMapStatus("Loading map data…", false);
+        loadGeo();
+      });
+      el.appendChild(retry);
     }
 
     function initMap() {
@@ -944,21 +969,54 @@
         document.getElementById(id).addEventListener("change", update);
       });
 
-      fetch("/api/mk-geo")
-        .then(function (res) { return res.json().then(function (body) { return { ok: res.ok, body: body }; }); })
-        .then(function (result) {
-          if (!result.ok || result.body.error) throw new Error(result.body.error || "Request failed");
-          mapState.geo = result.body;
+      loadGeo();
+    }
+
+    function fetchGeo(url) {
+      return fetch(url).then(function (res) {
+        return res
+          .json()
+          .catch(function () { throw new Error(url + " responded " + res.status); })
+          .then(function (body) {
+            if (!res.ok || body.error) {
+              var err = new Error(body.error || url + " responded " + res.status);
+              err.detail = body.detail;
+              throw err;
+            }
+            if (!Array.isArray(body.buildings) || !Array.isArray(body.attractions)) {
+              throw new Error(url + " returned an unexpected payload");
+            }
+            return { body: body, snapshot: res.headers.get("x-mk-geo-source") === "snapshot" };
+          });
+      });
+    }
+
+    function loadGeo() {
+      // The committed snapshot is the normal path: no runtime dependency on Overpass,
+      // which rate limits shared cloud IPs. The live endpoint is only a fallback for
+      // deploys where the snapshot has not been generated yet.
+      fetchGeo("/mk-geo.json")
+        .then(function (result) { return { result: result, source: "" }; })
+        .catch(function () {
+          return fetchGeo("/api/mk-geo").then(function (result) {
+            return { result: result, source: result.snapshot ? " · cached snapshot" : " · live query" };
+          });
+        })
+        .then(function (loaded) {
+          mapState.geo = loaded.result.body;
           var withHeight = mapState.geo.buildings.filter(function (b) { return b.height; }).length;
           setMapStatus(
             mapState.geo.buildings.length + " buildings (" + withHeight + " with mapped heights) · " +
-            mapState.geo.attractions.length + " attractions from OpenStreetMap",
+            mapState.geo.attractions.length + " attractions from OpenStreetMap" + loaded.source,
             false
           );
           update();
         })
         .catch(function (error) {
-          setMapStatus("Could not load OpenStreetMap data: " + error.message, true);
+          setMapError(
+            "OpenStreetMap data unavailable right now — the sun position and shade guide below still work.",
+            error.detail || error.message
+          );
         });
     }
 
