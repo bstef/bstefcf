@@ -972,25 +972,42 @@
       loadGeo();
     }
 
+    function fetchGeo(url) {
+      return fetch(url).then(function (res) {
+        return res
+          .json()
+          .catch(function () { throw new Error(url + " responded " + res.status); })
+          .then(function (body) {
+            if (!res.ok || body.error) {
+              var err = new Error(body.error || url + " responded " + res.status);
+              err.detail = body.detail;
+              throw err;
+            }
+            if (!Array.isArray(body.buildings) || !Array.isArray(body.attractions)) {
+              throw new Error(url + " returned an unexpected payload");
+            }
+            return { body: body, snapshot: res.headers.get("x-mk-geo-source") === "snapshot" };
+          });
+      });
+    }
+
     function loadGeo() {
-      fetch("/api/mk-geo")
-        .then(function (res) {
-          return res.json().then(function (body) {
-            return { ok: res.ok, body: body, snapshot: res.headers.get("x-mk-geo-source") === "snapshot" };
+      // The committed snapshot is the normal path: no runtime dependency on Overpass,
+      // which rate limits shared cloud IPs. The live endpoint is only a fallback for
+      // deploys where the snapshot has not been generated yet.
+      fetchGeo("/mk-geo.json")
+        .then(function (result) { return { result: result, source: "" }; })
+        .catch(function () {
+          return fetchGeo("/api/mk-geo").then(function (result) {
+            return { result: result, source: result.snapshot ? " · cached snapshot" : " · live query" };
           });
         })
-        .then(function (result) {
-          if (!result.ok || result.body.error) {
-            var err = new Error(result.body.error || "Request failed");
-            err.detail = result.body.detail;
-            throw err;
-          }
-          mapState.geo = result.body;
+        .then(function (loaded) {
+          mapState.geo = loaded.result.body;
           var withHeight = mapState.geo.buildings.filter(function (b) { return b.height; }).length;
           setMapStatus(
             mapState.geo.buildings.length + " buildings (" + withHeight + " with mapped heights) · " +
-            mapState.geo.attractions.length + " attractions from OpenStreetMap" +
-            (result.snapshot ? " · cached snapshot" : ""),
+            mapState.geo.attractions.length + " attractions from OpenStreetMap" + loaded.source,
             false
           );
           update();

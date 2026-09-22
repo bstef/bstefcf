@@ -57,6 +57,25 @@ It is defined as a `CARTO_KEY` constant in each page that needs it, so rotating 
 
 Keys are managed at [dashboard.basemaps.carto.com/keys](https://dashboard.basemaps.carto.com/keys).
 
+## Magic Kingdom shade map data
+
+`magic-kingdom-shade-map.html` draws building shadows from OpenStreetMap geometry. That geometry is committed as **`mk-geo.json`** and served as a static file, so the page has no runtime dependency on Overpass — public Overpass instances rate limit per IP, and Cloudflare's shared egress IPs took the map down once because of it.
+
+| Path | Role |
+| --- | --- |
+| `mk-geo.json` | The committed snapshot the page actually reads |
+| `scripts/refresh-mk-geo.sh` | Regenerates the snapshot |
+| `functions/api/mk-geo.js` | Queries Overpass and normalizes it; used by the refresh script, and as a fallback if the snapshot is missing |
+
+Park geometry changes rarely, so refreshing is a manual, occasional step rather than part of any build:
+
+```sh
+./scripts/refresh-mk-geo.sh
+git add mk-geo.json && git commit -m "Refresh Magic Kingdom OSM snapshot"
+```
+
+The script refuses to overwrite a good snapshot with an error body or an empty result, so a refresh attempted while Overpass is rate limiting fails loudly instead of committing a broken file.
+
 ## Home Value Tracker
 
 `home-value.html` is a personal real-estate dashboard for a small set of family properties. The current UI includes:
