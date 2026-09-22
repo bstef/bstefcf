@@ -17,8 +17,9 @@ const ALERTS_URL = "https://api.weather.gov/alerts/active";
 // NWS asks that clients identify themselves.
 const NWS_USER_AGENT = "(bstef.pages.dev, https://github.com/bstef/bstefcf)";
 
-const WEATHER_CACHE_SECONDS = 900; // 15 minutes
-const ALERT_CACHE_SECONDS = 120; // alerts are safety information, so barely cached
+// The response bundles alerts with the weather, so the whole thing inherits the
+// alert TTL: safety information must not sit behind a long-lived cache entry.
+const ALERT_CACHE_SECONDS = 120;
 const UPSTREAM_TIMEOUT_MS = 12000;
 
 // WMO weather interpretation codes.
@@ -84,6 +85,43 @@ async function fetchJson(url, init = {}) {
 
 function todayInPark() {
   return new Date().toLocaleDateString("en-CA", { timeZone: MK_TZ });
+}
+
+function parkOffsetMinutes(utcMs) {
+  const dtf = new Intl.DateTimeFormat("en-US", {
+    timeZone: MK_TZ,
+    hour12: false,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit"
+  });
+  const parts = {};
+  for (const part of dtf.formatToParts(new Date(utcMs))) parts[part.type] = part.value;
+  const asIfUtc = Date.UTC(
+    Number(parts.year),
+    Number(parts.month) - 1,
+    Number(parts.day),
+    Number(parts.hour) % 24,
+    Number(parts.minute),
+    Number(parts.second)
+  );
+  return (asIfUtc - utcMs) / 60000;
+}
+
+// Midnight in the park's own timezone, which is what "that day" means to a guest.
+// Iterates because the offset itself depends on the instant across a DST change.
+function parkMidnightUtc(dateISO) {
+  const naive = Date.parse(`${dateISO}T00:00:00Z`);
+  let ms = naive;
+  for (let i = 0; i < 2; i++) ms = naive - parkOffsetMinutes(ms) * 60000;
+  return ms;
+}
+
+function nextDay(dateISO) {
+  return new Date(Date.parse(`${dateISO}T00:00:00Z`) + 86400000).toISOString().slice(0, 10);
 }
 
 function daysBetween(fromISO, toISO) {
@@ -162,8 +200,8 @@ function normalizeWeather(payload) {
 // An alert matters for the selected day when its active window overlaps that day,
 // so a watch issued today for Thursday shows up when Thursday is selected.
 function alertsForDate(features, date) {
-  const dayStart = Date.parse(`${date}T00:00:00Z`) - 24 * 3600000;
-  const dayEnd = Date.parse(`${date}T00:00:00Z`) + 48 * 3600000;
+  const dayStart = parkMidnightUtc(date);
+  const dayEnd = parkMidnightUtc(nextDay(date));
 
   return features
     .map((feature) => feature.properties || {})
@@ -173,7 +211,7 @@ function alertsForDate(features, date) {
       if (Number.isNaN(startsAt) && Number.isNaN(endsAt)) return true;
       const from = Number.isNaN(startsAt) ? dayStart : startsAt;
       const to = Number.isNaN(endsAt) ? dayEnd : endsAt;
-      return from <= dayEnd && to >= dayStart;
+      return from < dayEnd && to > dayStart;
     })
     .map((props) => ({
       event: props.event || "Weather alert",
@@ -225,7 +263,10 @@ export async function onRequestGet(context) {
     results.alertsError = `Could not reach the National Weather Service (${error.message}).`;
   }
 
-  // Alerts go stale in a way that matters, so the whole payload follows their TTL.
-  const maxAge = results.alerts.length ? ALERT_CACHE_SECONDS : Math.min(WEATHER_CACHE_SECONDS, 600);
-  return json(results, 200, { "cache-control": `public, max-age=60, s-maxage=${maxAge}` });
+  // The payload carries alerts, so it always follows their TTL. An empty list is
+  // precisely the case that must expire quickly: a warning issued a moment later
+  // would otherwise sit behind a cached "no alerts" until the longer TTL lapsed.
+  return json(results, 200, {
+    "cache-control": `public, max-age=${Math.min(60, ALERT_CACHE_SECONDS)}, s-maxage=${ALERT_CACHE_SECONDS}`
+  });
 }

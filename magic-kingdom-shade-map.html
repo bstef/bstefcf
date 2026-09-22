@@ -947,6 +947,9 @@
       weatherState.date = dateStr;
       weatherState.data = null;
       weatherState.pending = true;
+      // A warning belonging to the previous date must not sit above the new one
+      // while this request is in flight.
+      renderAlerts([], null);
       renderWeather(parseInt(timeSlider.value, 10));
 
       fetch("/api/mk-weather?date=" + encodeURIComponent(dateStr))
