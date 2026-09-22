@@ -76,6 +76,23 @@ git add mk-geo.json && git commit -m "Refresh Magic Kingdom OSM snapshot"
 
 The script refuses to overwrite a good snapshot with an error body or an empty result, so a refresh attempted while Overpass is rate limiting fails loudly instead of committing a broken file.
 
+### Weather and alerts
+
+`functions/api/mk-weather.js` adds conditions for the selected date plus any active National Weather Service alerts. Both upstreams are keyless, so there is nothing to configure:
+
+| Upstream | Provides |
+| --- | --- |
+| [Open-Meteo](https://open-meteo.com/) | Hourly temperature, apparent temperature, cloud cover, rain chance and UV index; daily highs, lows and WMO condition codes |
+| [NWS](https://www.weather.gov/documentation/services-web-api) | Active watches, warnings and advisories for the park's coordinates |
+
+Notes on behaviour:
+
+- Daily figures are derived from the hourly series rather than requested as daily variables, so the payload does not depend on aggregation names that differ between Open-Meteo models.
+- Weather covers roughly 90 days back to 16 days ahead. Outside that the page says so rather than showing anything invented — the date picker happily goes to any solstice.
+- Alerts are matched by whether their active window overlaps the selected date, so a hurricane watch issued today appears when you select the day it applies to.
+- Alert responses are cached for two minutes only, since they are safety information.
+- Cloud cover feeds the sun-intensity readout: sun angle sets the ceiling, but an overcast hour reports as overcast rather than "very high".
+
 ## Home Value Tracker
 
 `home-value.html` is a personal real-estate dashboard for a small set of family properties. The current UI includes:
