@@ -192,6 +192,39 @@
   }
   .leaflet-control-attribution a { color: var(--accent2) !important; }
 
+  .alert-stack { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+  .alert {
+    border-radius: 12px;
+    padding: 13px 16px;
+    border: 1px solid;
+    background: var(--card);
+  }
+  .alert-extreme, .alert-severe { border-color: rgba(251,113,133,0.5); background: rgba(251,113,133,0.09); }
+  .alert-moderate { border-color: rgba(251,191,36,0.45); background: rgba(251,191,36,0.08); }
+  .alert-minor, .alert-unknown { border-color: var(--border); }
+  .alert-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; }
+  .alert-event { font-weight: 700; font-size: 14.5px; }
+  .alert-extreme .alert-event, .alert-severe .alert-event { color: var(--sunny); }
+  .alert-moderate .alert-event { color: var(--mixed); }
+  .alert-when { font-size: 12px; color: var(--muted); }
+  .alert-headline { font-size: 13px; color: var(--text); margin-top: 5px; line-height: 1.5; }
+  .alert details { margin-top: 8px; }
+  .alert summary { cursor: pointer; font-size: 12.5px; color: var(--accent2); }
+  .alert details p {
+    white-space: pre-wrap;
+    font-size: 12.5px;
+    color: var(--muted);
+    line-height: 1.55;
+    margin: 8px 0 0;
+    max-height: 260px;
+    overflow-y: auto;
+  }
+
+  .weather-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 12px; }
+  .weather-note { font-size: 12.5px; color: var(--muted); line-height: 1.6; margin-top: 12px; }
+  .weather-note b { color: var(--text); }
+  .storm-flag { color: var(--sunny); font-weight: 600; }
+
   .map-toolbar { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; margin-bottom: 12px; }
   .toggle { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; color: var(--muted); cursor: pointer; }
   .toggle input { accent-color: var(--accent); width: 15px; height: 15px; cursor: pointer; }
@@ -255,6 +288,14 @@
         <button class="btn" id="nowBtn">Use right now</button>
       </div>
       <div class="chips" id="seasonChips"></div>
+    </div>
+
+    <div class="alert-stack" id="alertStack"></div>
+
+    <div class="section-title" style="margin-top:24px;">Weather <span class="n" id="weatherDateLabel"></span></div>
+    <div class="card">
+      <div class="weather-grid" id="weatherGrid"></div>
+      <div class="weather-note" id="weatherNote"></div>
     </div>
 
     <div class="grid-2" style="margin-top:20px;">
@@ -649,6 +690,13 @@
 
     function renderStats(dateStr, minutesOfDay, pos, times) {
       var intensity = intensityFor(pos.elevation);
+      // Sun angle sets the ceiling on intensity; cloud cover is what actually
+      // reaches the ground, so a clear-sky reading alone would mislead.
+      var sky = hourlyAt(minutesOfDay);
+      if (sky && typeof sky.cloudCover === "number" && pos.elevation > 0) {
+        if (sky.cloudCover >= 70) intensity = { label: "Overcast", cls: "low" };
+        else if (sky.cloudCover >= 35) intensity = { label: intensity.label + ", hazy", cls: intensity.cls };
+      }
       var dayLenTotalMin = Math.round(times.dayLengthMin);
       var dayLenH = Math.floor(dayLenTotalMin / 60);
       var dayLenM = dayLenTotalMin % 60;
@@ -746,6 +794,181 @@
         dirLabels +
         '<polygon points="' + tipX.toFixed(1) + ',' + tipY.toFixed(1) + ' ' + bx1.toFixed(1) + ',' + by1.toFixed(1) + ' ' + bx2.toFixed(1) + ',' + by2.toFixed(1) + '" fill="' + needleColor + '"/>' +
         '<circle cx="' + cx + '" cy="' + cy + '" r="4" fill="' + needleColor + '"/>';
+    }
+
+    // ---------- Weather ----------
+
+    var weatherState = { date: null, data: null, pending: false };
+
+    function severityClass(severity) {
+      var known = ["extreme", "severe", "moderate", "minor"];
+      var key = String(severity || "").toLowerCase();
+      return "alert-" + (known.indexOf(key) !== -1 ? key : "unknown");
+    }
+
+    function formatAlertWindow(onset, ends) {
+      var opts = { timeZone: MK_TZ, month: "short", day: "numeric", hour: "numeric", minute: "2-digit" };
+      var start = onset ? new Date(onset) : null;
+      var finish = ends ? new Date(ends) : null;
+      if (start && isNaN(start.getTime())) start = null;
+      if (finish && isNaN(finish.getTime())) finish = null;
+      if (!start && !finish) return "";
+      if (start && finish) {
+        return start.toLocaleString("en-US", opts) + " – " + finish.toLocaleString("en-US", opts);
+      }
+      return (start || finish).toLocaleString("en-US", opts) + (start ? " onward" : " until");
+    }
+
+    function renderAlerts(alerts, alertsError) {
+      var stack = document.getElementById("alertStack");
+      stack.innerHTML = "";
+      if (alertsError) {
+        var note = document.createElement("div");
+        note.className = "alert alert-unknown";
+        note.innerHTML = '<div class="alert-headline">' + escapeHtml(alertsError) + "</div>";
+        stack.appendChild(note);
+        return;
+      }
+      if (!alerts || !alerts.length) return;
+
+      alerts.forEach(function (alert) {
+        var el = document.createElement("div");
+        el.className = "alert " + severityClass(alert.severity);
+        var when = formatAlertWindow(alert.onset, alert.ends);
+        var html =
+          '<div class="alert-head">' +
+          '<span class="alert-event">⚠ ' + escapeHtml(alert.event) + "</span>" +
+          (when ? '<span class="alert-when">' + escapeHtml(when) + "</span>" : "") +
+          "</div>";
+        if (alert.headline) html += '<div class="alert-headline">' + escapeHtml(alert.headline) + "</div>";
+        if (alert.description || alert.instruction) {
+          html +=
+            "<details><summary>Details</summary><p>" +
+            escapeHtml([alert.description, alert.instruction].filter(Boolean).join("\n\n")) +
+            "</p></details>";
+        }
+        el.innerHTML = html;
+        stack.appendChild(el);
+      });
+    }
+
+    function weatherStat(label, value) {
+      return '<div class="stat"><div class="k">' + label + '</div><div class="v">' + value + "</div></div>";
+    }
+
+    function hourlyAt(minutesOfDay) {
+      if (!weatherState.data || !weatherState.data.weather) return null;
+      var hours = weatherState.data.weather.hours || [];
+      var target = Math.floor(minutesOfDay / 60);
+      for (var i = 0; i < hours.length; i++) {
+        if (hours[i].hour === target) return hours[i];
+      }
+      return null;
+    }
+
+    function renderWeather(minutesOfDay) {
+      var grid = document.getElementById("weatherGrid");
+      var note = document.getElementById("weatherNote");
+      var payload = weatherState.data;
+
+      var label = document.getElementById("weatherDateLabel");
+      label.textContent = weatherState.date
+        ? new Date(weatherState.date + "T12:00:00Z").toLocaleDateString("en-US", {
+            timeZone: "UTC", weekday: "long", month: "long", day: "numeric"
+          })
+        : "";
+
+      if (weatherState.pending) {
+        grid.innerHTML = "";
+        note.textContent = "Loading weather…";
+        return;
+      }
+      if (!payload) {
+        grid.innerHTML = "";
+        note.textContent = "";
+        return;
+      }
+
+      var weather = payload.weather;
+      if (!weather) {
+        grid.innerHTML = "";
+        note.textContent = payload.weatherError || "No weather available for this date.";
+        return;
+      }
+
+      var round = function (v, suffix) {
+        return typeof v === "number" ? Math.round(v) + (suffix || "") : "—";
+      };
+
+      grid.innerHTML =
+        weatherStat("Conditions", weather.summary || "—") +
+        weatherStat("High / Low", round(weather.high, "°") + " / " + round(weather.low, "°")) +
+        weatherStat("Feels like", round(weather.feelsLikeMax, "°")) +
+        weatherStat("Cloud cover", round(weather.cloudCoverMean, "%")) +
+        weatherStat("Rain chance", round(weather.precipitationChanceMax, "%")) +
+        weatherStat("UV index", typeof weather.uvIndexMax === "number" ? weather.uvIndexMax.toFixed(1) : "—") +
+        weatherStat("Wind", round(weather.windSpeedMax, " mph"));
+
+      var parts = [];
+      var current = hourlyAt(minutesOfDay);
+      if (current) {
+        var atTime = [];
+        if (typeof current.temperature === "number") atTime.push(Math.round(current.temperature) + "°");
+        if (typeof current.cloudCover === "number") atTime.push(Math.round(current.cloudCover) + "% cloud");
+        if (typeof current.precipitationProbability === "number") {
+          atTime.push(Math.round(current.precipitationProbability) + "% rain");
+        }
+        if (atTime.length) {
+          parts.push("At <b>" + fmtMinutesAsClock(minutesOfDay) + "</b>: " + atTime.join(" · "));
+        }
+        if (typeof current.cloudCover === "number" && current.cloudCover >= 70) {
+          parts.push("Heavy cloud cover at this hour, so shade matters much less than the map suggests.");
+        }
+      }
+
+      if (weather.stormHours && weather.stormHours.length) {
+        var from = Math.min.apply(null, weather.stormHours);
+        var to = Math.max.apply(null, weather.stormHours);
+        parts.push(
+          '<span class="storm-flag">Thunderstorms in the forecast</span> between ' +
+            fmtMinutesAsClock(from * 60) + " and " + fmtMinutesAsClock(to * 60 + 59) + "."
+        );
+      }
+
+      if (typeof weather.uvIndexMax === "number" && weather.uvIndexMax >= 8) {
+        parts.push("Peak UV index of " + weather.uvIndexMax.toFixed(1) + " is very high — covered queues are worth prioritising.");
+      }
+
+      note.innerHTML = parts.join("<br>");
+    }
+
+    function loadWeather(dateStr) {
+      if (weatherState.date === dateStr && (weatherState.data || weatherState.pending)) return;
+      weatherState.date = dateStr;
+      weatherState.data = null;
+      weatherState.pending = true;
+      renderWeather(parseInt(timeSlider.value, 10));
+
+      fetch("/api/mk-weather?date=" + encodeURIComponent(dateStr))
+        .then(function (res) { return res.json(); })
+        .then(function (body) {
+          if (weatherState.date !== dateStr) return;
+          weatherState.pending = false;
+          weatherState.data = body;
+          // Alerts are redrawn only when the payload changes, so dragging the time
+          // slider cannot collapse an alert the reader has expanded.
+          renderAlerts(body.alerts, body.alertsError);
+          // Re-run the full pass so the cloud-aware sun intensity picks this up.
+          // loadWeather short-circuits once data is present, so this cannot loop.
+          update();
+        })
+        .catch(function (error) {
+          if (weatherState.date !== dateStr) return;
+          weatherState.pending = false;
+          weatherState.data = { weather: null, weatherError: "Weather unavailable: " + error.message, alerts: [] };
+          renderAlerts([], null);
+          update();
+        });
     }
 
     // ---------- Shadow map ----------
@@ -1066,6 +1289,10 @@
       var pos = calcSolarPosition(utc, MK_LAT, MK_LON);
       var times = computeSunTimes(dateStr, MK_LAT, MK_LON);
 
+      // Ahead of renderStats, which reads cloud cover: this drops weather belonging
+      // to a previously selected date so it cannot leak into the new day's stats.
+      loadWeather(dateStr);
+
       renderStats(dateStr, minutesOfDay, pos, times);
       var scale = renderSunPath(dateStr);
       markSunPath(scale, minutesOfDay, pos.elevation);
@@ -1073,6 +1300,7 @@
       renderWindowNote(dateStr);
       renderAttractions(pos.elevation);
       scheduleMapRedraw(pos.elevation, pos.azimuth);
+      renderWeather(minutesOfDay);
     }
 
     function init() {
