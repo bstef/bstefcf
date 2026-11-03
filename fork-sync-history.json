@@ -1229,5 +1229,17 @@
     ],
     "conflictRepos": [],
     "notes": "Run by n8n via GitHub merge-upstream API (no browser). 1 repo(s) errored: openclaw: HTTP 422 refusing to allow a Personal Access Token to create or update workflow `.github/workflows/ci.yml` without `workflow` scope"
+  },
+  {
+    "date": "2026-11-03T10:32:18.690-05:00",
+    "dateDisplay": "Nov 3, 2026, 10:32 AM",
+    "status": "partial",
+    "forksChecked": 89,
+    "synced": 0,
+    "upToDate": 88,
+    "conflicts": 0,
+    "syncedRepos": [],
+    "conflictRepos": [],
+    "notes": "Run by n8n via GitHub merge-upstream API (no browser). 1 repo(s) errored: openclaw: HTTP 422 refusing to allow a Personal Access Token to create or update workflow `.github/workflows/ci.yml` without `workflow` scope"
   }
 ]
