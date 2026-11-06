@@ -17,6 +17,7 @@ Cloudflare Pages deploys this repository automatically from `main`. There is no 
 | `qr.html` | QR code generator |
 | `whois.html` | Domain & IP WHOIS lookup |
 | `fork-sync.html` | GitHub fork sync status report |
+| `lxc-updates.html` | Weekly Proxmox LXC update status (per-container app/OS results, reboot flags); data in `lxc-update-history.json`, written by the `pve-weekly-update.sh` job on the inwood node |
 | `cloudflare.html` | Cloudflare traffic/cache/error dashboard |
 | `inwood-eero-network.html` | Interactive home network topology |
 | `volvo.html` | Volvo dashboard — vehicle status, controls, trips, map, fuel tracking and updates |

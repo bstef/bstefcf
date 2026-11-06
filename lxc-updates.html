@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🖥️</text></svg>">
+  <link rel="stylesheet" href="/site-nav.css">
+  <title>🖥️ LXC Update Status — bstef.pages.dev</title>
+  <style>
+    :root {
+      --bg: #0a0e14;
+      --grid: rgba(255, 255, 255, 0.04);
+      --accent: #5eead4;
+      --text: #e5e7eb;
+      --muted: #8b93a1;
+      --card: #10151f;
+      --border: rgba(255, 255, 255, 0.08);
+      --yellow: #f5c451;
+      --red: #f87171;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      background-image:
+        linear-gradient(var(--grid) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+      background-size: 40px 40px;
+      min-height: 100vh;
+      padding: 60px 24px;
+    }
+
+    .wrap {
+      max-width: 880px;
+      margin: 0 auto;
+    }
+
+    header {
+      margin-bottom: 28px;
+    }
+
+    .tag {
+      display: inline-block;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 13px;
+      color: var(--accent);
+      border: 1px solid rgba(94, 234, 212, 0.3);
+      background: rgba(94, 234, 212, 0.06);
+      padding: 3px 10px;
+      border-radius: 20px;
+      margin-bottom: 14px;
+    }
+
+    h1 {
+      margin: 0 0 8px 0;
+      font-size: 26px;
+    }
+
+    .sub {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .tab-btn {
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 500;
+      padding: 10px 4px;
+      margin-right: 20px;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      font-family: inherit;
+    }
+
+    .tab-btn.active {
+      color: var(--text);
+      border-bottom-color: var(--accent);
+    }
+
+    .tab-btn:hover {
+      color: var(--accent);
+    }
+
+    .tab-panel {
+      display: none;
+    }
+
+    .tab-panel.active {
+      display: block;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-bottom: 32px;
+    }
+
+    .stat {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px;
+      text-align: center;
+    }
+
+    .stat .num {
+      font-size: 26px;
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    .stat .label {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 4px;
+    }
+
+    .section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 22px 24px;
+      margin-bottom: 20px;
+    }
+
+    .section h2 {
+      font-size: 15px;
+      margin: 0 0 14px 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section.disclosure {
+      padding: 0 24px;
+    }
+
+    .section.disclosure summary {
+      cursor: pointer;
+      list-style-position: inside;
+      padding: 22px 0;
+    }
+
+    .section.disclosure summary h2 {
+      display: inline-flex;
+      margin: 0;
+      vertical-align: middle;
+    }
+
+    .section.disclosure .repo-list {
+      padding-bottom: 13px;
+    }
+
+    .badge {
+      display: inline-block;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 9px;
+      border-radius: 12px;
+      background: rgba(94, 234, 212, 0.1);
+      color: var(--accent);
+      border: 1px solid rgba(94, 234, 212, 0.25);
+    }
+
+    .status-pill {
+      display: inline-block;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+
+    .status-success {
+      background: rgba(94, 234, 212, 0.1);
+      color: var(--accent);
+      border: 1px solid rgba(94, 234, 212, 0.3);
+    }
+
+    .status-partial {
+      background: rgba(245, 196, 81, 0.1);
+      color: var(--yellow);
+      border: 1px solid rgba(245, 196, 81, 0.3);
+    }
+
+    .status-failed {
+      background: rgba(248, 113, 113, 0.1);
+      color: var(--red);
+      border: 1px solid rgba(248, 113, 113, 0.3);
+    }
+
+    ul.repo-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    ul.repo-list li {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 9px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+
+    ul.repo-list li:last-child {
+      border-bottom: none;
+    }
+
+    ul.repo-list a {
+      color: var(--text);
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    ul.repo-list a:hover {
+      color: var(--accent);
+    }
+
+    .detail {
+      color: var(--muted);
+      font-size: 12px;
+      text-align: left;
+      white-space: normal;
+      flex: 1;
+      min-width: 0;
+      padding-left: 12px;
+    }
+
+    table.history {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    table.history th {
+      text-align: left;
+      color: var(--muted);
+      font-weight: 500;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      padding: 0 10px 10px 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    table.history td {
+      padding: 12px 10px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    table.history tr:last-child td {
+      border-bottom: none;
+    }
+
+    table.history .num-cell {
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    table.history .notes-cell {
+      color: var(--muted);
+      font-size: 12px;
+      max-width: 220px;
+    }
+
+    .empty-state {
+      color: var(--muted);
+      font-size: 13px;
+      text-align: center;
+      padding: 30px 0;
+    }
+
+    .analytics-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+
+    .analytics-card {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+    }
+
+    .analytics-card .num {
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    .analytics-card .label {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 4px;
+    }
+
+    .chart {
+      display: grid;
+      gap: 12px;
+    }
+
+    .bar-row {
+      display: grid;
+      grid-template-columns: minmax(120px, 180px) 1fr 34px;
+      align-items: center;
+      gap: 10px;
+      font-size: 12px;
+    }
+
+    .bar-label {
+      color: var(--muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .bar-track {
+      height: 10px;
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: 5px;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      min-width: 3px;
+      background: var(--accent);
+      border-radius: 5px;
+    }
+
+    .bar-fill.partial {
+      background: var(--yellow);
+    }
+
+    .bar-fill.failed {
+      background: var(--red);
+    }
+
+    .bar-value {
+      color: var(--text);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      text-align: right;
+    }
+
+    .chart-note {
+      color: var(--muted);
+      font-size: 12px;
+      margin: -4px 0 16px;
+    }
+
+    @media (max-width: 680px) {
+      body {
+        padding: 32px 14px;
+      }
+
+      .stats,
+      .analytics-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .section {
+        padding: 18px 16px;
+      }
+
+      .tabs {
+        overflow-x: auto;
+      }
+
+      .tab-btn {
+        flex: 0 0 auto;
+        margin-right: 10px;
+      }
+
+      .bar-row {
+        grid-template-columns: minmax(90px, 1fr) 1.4fr 28px;
+        gap: 7px;
+      }
+
+      table.history {
+        min-width: 700px;
+      }
+
+      .section:has(table.history) {
+        overflow-x: auto;
+      }
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 48px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    footer a {
+      color: var(--muted);
+      text-decoration: none;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    footer a:hover {
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      background: rgba(255, 255, 255, 0.06);
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+  
+    /* lxc-updates additions */
+    .pill { display:inline-block; font-size:11px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; padding:2px 9px; border-radius:20px; border:1px solid var(--border); white-space:nowrap; }
+    .pill.ok { color:var(--accent); background:rgba(94,234,212,.08); border-color:rgba(94,234,212,.3); }
+    .pill.warn { color:var(--yellow); background:rgba(245,196,81,.08); border-color:rgba(245,196,81,.3); }
+    .pill.bad { color:var(--red); background:rgba(248,113,113,.08); border-color:rgba(248,113,113,.3); }
+    .pill.none { color:var(--muted); }
+    table.ct { width:100%; border-collapse:collapse; font-size:14px; }
+    table.ct th { text-align:left; font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); padding:8px 10px; border-bottom:1px solid var(--border); }
+    table.ct td { padding:10px; border-bottom:1px solid var(--border); vertical-align:top; }
+    table.ct tr:last-child td { border-bottom:0; }
+    table.ct .ctid { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; color:var(--muted); }
+    table.ct .small { display:block; margin-top:4px; font-size:12px; color:var(--muted); }
+    .table-scroll { overflow-x:auto; }
+</style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div id="site-back"></div>
+
+    <header>
+      <div class="tag">&#9679; pve-weekly-update</div>
+      <h1>🖥️ LXC Update Status</h1>
+      <div class="sub" id="latest-sub">Loading&hellip;</div>
+    </header>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="latest">Latest Run</button>
+      <button class="tab-btn" data-tab="history">History</button>
+    </div>
+
+    <div class="tab-panel active" id="panel-latest">
+      <div class="stats" id="latest-stats"></div>
+      <div class="section">
+        <h2>Containers <span class="badge" id="ct-count-badge">0</span></h2>
+        <div class="table-scroll">
+          <table class="ct" id="ct-table">
+            <thead>
+              <tr><th>CT</th><th>Name</th><th>App update</th><th>OS packages</th><th>Reboot</th></tr>
+            </thead>
+            <tbody id="ct-tbody"></tbody>
+          </table>
+        </div>
+        <div class="empty-state" id="latest-empty" style="display:none;"></div>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="panel-history">
+      <div class="section">
+        <h2>Run history <span class="badge" id="history-count-badge">0</span></h2>
+        <div class="table-scroll">
+          <table class="history" id="history-table">
+            <thead>
+              <tr><th>Run</th><th>Status</th><th>Trigger</th><th>Containers</th><th>Apps OK / bad</th><th>OS OK / bad</th><th>Reboot</th><th>Duration</th></tr>
+            </thead>
+            <tbody id="history-tbody"></tbody>
+          </table>
+        </div>
+        <div class="empty-state" id="history-empty" style="display:none;">No history recorded yet.</div>
+      </div>
+    </div>
+
+    <footer>
+      Reported by the weekly <code>pve-weekly-update.sh</code> job on the <code>inwood</code> Proxmox node (Sundays 4:00 AM, or when run manually with <code>lxcupdate</code>)
+    </footer>
+
+    <div id="site-footer"></div>
+  </div>
+
+  <script src="/site-nav.js" defer></script>
+  <script>
+    function escapeHtml(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+        return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+      });
+    }
+    function runPill(status) {
+      var cls = status === 'success' ? 'status-success' : status === 'warning' ? 'status-partial' : 'status-failed';
+      return '<span class="status-pill ' + cls + '">' + escapeHtml(status || 'unknown') + '</span>';
+    }
+    function pill(cls, text) { return '<span class="pill ' + cls + '">' + escapeHtml(text) + '</span>'; }
+    function appCell(app) {
+      if (!app) return pill('none', 'n/a');
+      var s = app.status, cls = s === 'OK' ? 'ok' : (s === 'SKIPPED' ? 'warn' : 'bad');
+      var label = s === 'OK' ? 'updated' : s.toLowerCase();
+      var detail = s === 'OK' ? '' : '<span class="small">' + escapeHtml(app.details) + '</span>';
+      return pill(cls, label) + (app.service ? '<span class="small">' + escapeHtml(app.service) + '</span>' : '') + detail;
+    }
+    function osCell(s) {
+      if (s === 'ok') return pill('ok', 'updated');
+      if (s === 'failed') return pill('bad', 'failed');
+      if (s === 'excluded') return pill('none', 'excluded');
+      return pill('warn', s || 'unknown');
+    }
+    function fmtDuration(sec) {
+      if (sec == null) return '—';
+      var m = Math.floor(sec / 60), s = sec % 60;
+      return m ? m + 'm ' + s + 's' : s + 's';
+    }
+    function num(v) { return v != null ? v : '—'; }
+
+    fetch('/lxc-update-history.json', { cache: 'no-store' })
+      .then(function (r) { return r.ok ? r.json() : []; })
+      .catch(function () { return []; })
+      .then(function (history) {
+        if (!Array.isArray(history)) history = [];
+        history = history.slice().sort(function (a, b) { return new Date(b.date) - new Date(a.date); });
+
+        var latest = history[0];
+        if (latest) {
+          document.getElementById('latest-sub').innerHTML =
+            'inwood &middot; ' + escapeHtml(latest.dateDisplay || latest.date) + ' &middot; ' +
+            runPill(latest.status) + ' &middot; ' + escapeHtml(latest.trigger === 'manual' ? 'manual run' : 'scheduled') +
+            ' &middot; ' + fmtDuration(latest.durationSec);
+
+          document.getElementById('latest-stats').innerHTML =
+            '<div class="stat"><div class="num">' + num(latest.containers) + '</div><div class="label">Containers</div></div>' +
+            '<div class="stat"><div class="num">' + num(latest.appsUpdated) + '</div><div class="label">Apps updated</div></div>' +
+            '<div class="stat"><div class="num">' + num(latest.osUpdated) + '</div><div class="label">OS updated</div></div>' +
+            '<div class="stat"><div class="num">' + ((latest.appsFailed || 0) + (latest.osFailed || 0)) + '</div><div class="label">Failures</div></div>' +
+            '<div class="stat"><div class="num">' + num(latest.rebootNeeded) + '</div><div class="label">Need reboot</div></div>';
+
+          var items = (latest.items || []).slice().sort(function (a, b) { return a.ctid - b.ctid; });
+          document.getElementById('ct-count-badge').textContent = items.length;
+          if (items.length) {
+            document.getElementById('ct-tbody').innerHTML = items.map(function (c) {
+              return '<tr>' +
+                '<td class="ctid">' + escapeHtml(c.ctid) + '</td>' +
+                '<td>' + escapeHtml(c.name) + '<span class="small">' + escapeHtml(c.os) + '</span></td>' +
+                '<td>' + appCell(c.app) + '</td>' +
+                '<td>' + osCell(c.osUpdate) + '</td>' +
+                '<td>' + (c.reboot ? pill('warn', 'needed') : pill('none', 'no')) + '</td>' +
+                '</tr>';
+            }).join('');
+          } else {
+            document.getElementById('ct-table').style.display = 'none';
+            document.getElementById('latest-empty').style.display = '';
+            document.getElementById('latest-empty').textContent = 'No running containers were found in the last run.';
+          }
+        } else {
+          document.getElementById('latest-sub').textContent = 'No run data found yet.';
+          document.getElementById('ct-table').style.display = 'none';
+          document.getElementById('latest-empty').style.display = '';
+          document.getElementById('latest-empty').textContent = 'No run data found yet. The first report appears after the next weekly run (or a manual lxcupdate).';
+        }
+
+        document.getElementById('history-count-badge').textContent = history.length;
+        if (history.length) {
+          document.getElementById('history-tbody').innerHTML = history.map(function (run) {
+            return '<tr>' +
+              '<td>' + escapeHtml(run.dateDisplay || run.date || '') + '</td>' +
+              '<td>' + runPill(run.status) + '</td>' +
+              '<td>' + escapeHtml(run.trigger || '') + '</td>' +
+              '<td class="num-cell">' + num(run.containers) + '</td>' +
+              '<td class="num-cell">' + num(run.appsUpdated) + ' / ' + num(run.appsFailed) + '</td>' +
+              '<td class="num-cell">' + num(run.osUpdated) + ' / ' + num(run.osFailed) + '</td>' +
+              '<td class="num-cell">' + num(run.rebootNeeded) + '</td>' +
+              '<td class="num-cell">' + fmtDuration(run.durationSec) + '</td>' +
+              '</tr>';
+          }).join('');
+        } else {
+          document.getElementById('history-empty').style.display = '';
+        }
+      });
+
+    document.querySelectorAll('.tab-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        document.querySelectorAll('.tab-btn').forEach(function (b) { b.classList.remove('active'); });
+        document.querySelectorAll('.tab-panel').forEach(function (p) { p.classList.remove('active'); });
+        btn.classList.add('active');
+        document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
+      });
+    });
+  </script>
+</body>
+
+</html>
