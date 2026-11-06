@@ -1,1 +1,122 @@
-[]
+[
+  {
+    "date": "2026-11-06T17:37:43-05:00",
+    "dateDisplay": "Nov 6, 2026, 5:37 PM",
+    "trigger": "manual",
+    "durationSec": 139,
+    "status": "failed",
+    "containers": 13,
+    "appsUpdated": 0,
+    "appsFailed": 0,
+    "appsSkipped": 0,
+    "osUpdated": 12,
+    "osFailed": 0,
+    "rebootNeeded": 0,
+    "items": [
+      {
+        "ctid": 100,
+        "name": "alpine-it-tools",
+        "os": "alpine",
+        "osUpdate": "ok",
+        "reboot": false,
+        "app": null
+      },
+      {
+        "ctid": 105,
+        "name": "InwoodHomebridge",
+        "os": "debian",
+        "osUpdate": "ok",
+        "reboot": false,
+        "app": null
+      },
+      {
+        "ctid": 110,
+        "name": "orb",
+        "os": "debian",
+        "osUpdate": "excluded",
+        "reboot": false,
+        "app": null
+      },
+      {
+        "ctid": 111,
+        "name": "myspeed",
+        "os": "debian",
+        "osUpdate": "ok",
+        "reboot": false,
+        "app": null
+      },
+      {
+        "ctid": 112,
+        "name": "n8n",
+        "os": "debian",
+        "osUpdate": "ok",
+        "reboot": false,
+        "app": null
+      },
+      {
+        "ctid": 113,
+        "name": "shlink",
+        "os": "debian",
+        "osUpdate": "ok",
+        "reboot": false,
+        "app": null
+      },
+      {
+        "ctid": 114,
+        "name": "uptimekuma",
+        "os": "debian",
+        "osUpdate": "ok",
+        "reboot": false,
+        "app": null
+      },
+      {
+        "ctid": 117,
+        "name": "domain-monitor",
+        "os": "debian",
+        "osUpdate": "ok",
+        "reboot": false,
+        "app": null
+      },
+      {
+        "ctid": 119,
+        "name": "speedtest-tracker",
+        "os": "debian",
+        "osUpdate": "ok",
+        "reboot": false,
+        "app": null
+      },
+      {
+        "ctid": 124,
+        "name": "plane",
+        "os": "debian",
+        "osUpdate": "ok",
+        "reboot": false,
+        "app": null
+      },
+      {
+        "ctid": 125,
+        "name": "myip",
+        "os": "debian",
+        "osUpdate": "ok",
+        "reboot": false,
+        "app": null
+      },
+      {
+        "ctid": 128,
+        "name": "wireguard",
+        "os": "debian",
+        "osUpdate": "ok",
+        "reboot": false,
+        "app": null
+      },
+      {
+        "ctid": 129,
+        "name": "actualbudget",
+        "os": "debian",
+        "osUpdate": "ok",
+        "reboot": false,
+        "app": null
+      }
+    ]
+  }
+]
