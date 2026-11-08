@@ -1,5 +1,20 @@
 [
   {
+    "date": "2026-11-08T04:00:01-05:00",
+    "dateDisplay": "Nov 8, 2026, 4:00 AM",
+    "trigger": "cron",
+    "durationSec": 0,
+    "status": "success",
+    "containers": 0,
+    "appsUpdated": 0,
+    "appsFailed": 0,
+    "appsSkipped": 0,
+    "osUpdated": 0,
+    "osFailed": 0,
+    "rebootNeeded": 0,
+    "items": []
+  },
+  {
     "date": "2026-11-06T17:37:43-05:00",
     "dateDisplay": "Nov 6, 2026, 5:37 PM",
     "trigger": "manual",
