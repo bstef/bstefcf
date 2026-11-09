@@ -1760,5 +1760,90 @@
     ],
     "conflictRepos": [],
     "notes": "Run by n8n via GitHub merge-upstream API (no browser)."
+  },
+  {
+    "date": "2026-11-09T03:07:24.117-05:00",
+    "dateDisplay": "Nov 9, 2026, 3:07 AM",
+    "status": "success",
+    "forksChecked": 91,
+    "synced": 18,
+    "upToDate": 73,
+    "conflicts": 0,
+    "syncedRepos": [
+      {
+        "name": "agent-sandbox",
+        "detail": "fast-forward from kubernetes-sigs:main → updated"
+      },
+      {
+        "name": "awesome-swift-macos-apps",
+        "detail": "fast-forward from jaywcjlove:main → updated"
+      },
+      {
+        "name": "buzz",
+        "detail": "fast-forward from block:main → updated"
+      },
+      {
+        "name": "carcast-public",
+        "detail": "fast-forward from rPlayAI:main → updated"
+      },
+      {
+        "name": "claude-code-templates",
+        "detail": "fast-forward from davila7:main → updated"
+      },
+      {
+        "name": "docling",
+        "detail": "fast-forward from docling-project:main → updated"
+      },
+      {
+        "name": "ever-gauzy",
+        "detail": "fast-forward from ever-co:develop → updated"
+      },
+      {
+        "name": "Feedly-Notifier",
+        "detail": "fast-forward from olsh:master → updated"
+      },
+      {
+        "name": "first2apply",
+        "detail": "fast-forward from beastx-ro:master → updated"
+      },
+      {
+        "name": "Ghost",
+        "detail": "fast-forward from TryGhost:main → updated"
+      },
+      {
+        "name": "ghostty",
+        "detail": "fast-forward from ghostty-org:main → updated"
+      },
+      {
+        "name": "humblehttp",
+        "detail": "fast-forward from rfc-st:master → updated"
+      },
+      {
+        "name": "openclaw",
+        "detail": "fast-forward from openclaw:main → updated"
+      },
+      {
+        "name": "opencti",
+        "detail": "fast-forward from OpenCTI-Platform:master → updated"
+      },
+      {
+        "name": "penguinpdf",
+        "detail": "fast-forward from grojobil:main → updated"
+      },
+      {
+        "name": "regen",
+        "detail": "fast-forward from FluidifyAI:main → updated"
+      },
+      {
+        "name": "sure-personal-finance",
+        "detail": "merge from we-promise:main → updated"
+      },
+      {
+        "name": "uptime-kuma",
+        "detail": "fast-forward from louislam:master → updated"
+      }
+    ],
+    "conflictRepos": [],
+    "notes": "Run by n8n via GitHub merge-upstream API (no browser)."
   }
 ]
