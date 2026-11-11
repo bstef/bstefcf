@@ -1,5 +1,125 @@
 [
   {
+    "date": "2026-11-11T15:49:02-05:00",
+    "dateDisplay": "Nov 11, 2026, 3:49 PM",
+    "trigger": "manual",
+    "durationSec": 639,
+    "status": "failed",
+    "containers": 13,
+    "appsUpdated": 0,
+    "appsFailed": 0,
+    "appsSkipped": 0,
+    "osUpdated": 12,
+    "osFailed": 0,
+    "rebootNeeded": 0,
+    "items": [
+      {
+        "ctid": 100,
+        "name": "alpine-it-tools",
+        "os": "alpine",
+        "osUpdate": "ok",
+        "reboot": false,
+        "app": null
+      },
+      {
+        "ctid": 110,
+        "name": "orb",
+        "os": "debian",
+        "osUpdate": "excluded",
+        "reboot": false,
+        "app": null
+      },
+      {
+        "ctid": 111,
+        "name": "myspeed",
+        "os": "debian",
+        "osUpdate": "ok",
+        "reboot": false,
+        "app": null
+      },
+      {
+        "ctid": 112,
+        "name": "n8n",
+        "os": "debian",
+        "osUpdate": "ok",
+        "reboot": false,
+        "app": null
+      },
+      {
+        "ctid": 113,
+        "name": "shlink",
+        "os": "debian",
+        "osUpdate": "ok",
+        "reboot": false,
+        "app": null
+      },
+      {
+        "ctid": 114,
+        "name": "uptimekuma",
+        "os": "debian",
+        "osUpdate": "ok",
+        "reboot": false,
+        "app": null
+      },
+      {
+        "ctid": 115,
+        "name": "your-spotify",
+        "os": "debian",
+        "osUpdate": "ok",
+        "reboot": false,
+        "app": null
+      },
+      {
+        "ctid": 117,
+        "name": "domain-monitor",
+        "os": "debian",
+        "osUpdate": "ok",
+        "reboot": false,
+        "app": null
+      },
+      {
+        "ctid": 119,
+        "name": "speedtest-tracker",
+        "os": "debian",
+        "osUpdate": "ok",
+        "reboot": false,
+        "app": null
+      },
+      {
+        "ctid": 124,
+        "name": "plane",
+        "os": "debian",
+        "osUpdate": "ok",
+        "reboot": false,
+        "app": null
+      },
+      {
+        "ctid": 125,
+        "name": "myip",
+        "os": "debian",
+        "osUpdate": "ok",
+        "reboot": false,
+        "app": null
+      },
+      {
+        "ctid": 128,
+        "name": "wireguard",
+        "os": "debian",
+        "osUpdate": "ok",
+        "reboot": false,
+        "app": null
+      },
+      {
+        "ctid": 129,
+        "name": "actualbudget",
+        "os": "debian",
+        "osUpdate": "ok",
+        "reboot": false,
+        "app": null
+      }
+    ]
+  },
+  {
     "date": "2026-11-08T04:00:01-05:00",
     "dateDisplay": "Nov 8, 2026, 4:00 AM",
     "trigger": "cron",
