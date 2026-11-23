@@ -1,5 +1,189 @@
 [
   {
+    "date": "2026-11-23T09:54:18-05:00",
+    "dateDisplay": "Nov 23, 2026, 9:54 AM",
+    "trigger": "manual",
+    "durationSec": 1395,
+    "status": "failed",
+    "containers": 14,
+    "appsUpdated": 12,
+    "appsFailed": 1,
+    "appsSkipped": 1,
+    "osUpdated": 13,
+    "osFailed": 0,
+    "rebootNeeded": 0,
+    "items": [
+      {
+        "ctid": 100,
+        "name": "alpine-it-tools",
+        "os": "alpine",
+        "osUpdate": "ok",
+        "reboot": false,
+        "app": {
+          "service": "alpine-it-tools",
+          "status": "OK",
+          "details": "Updated successfully"
+        }
+      },
+      {
+        "ctid": 105,
+        "name": "InwoodHomebridge",
+        "os": "debian",
+        "osUpdate": "ok",
+        "reboot": false,
+        "app": {
+          "service": "homebridge",
+          "status": "OK",
+          "details": "Updated successfully"
+        }
+      },
+      {
+        "ctid": 110,
+        "name": "orb",
+        "os": "debian",
+        "osUpdate": "excluded",
+        "reboot": false,
+        "app": {
+          "service": "orb",
+          "status": "OK",
+          "details": "Updated successfully"
+        }
+      },
+      {
+        "ctid": 111,
+        "name": "myspeed",
+        "os": "debian",
+        "osUpdate": "ok",
+        "reboot": false,
+        "app": {
+          "service": "myspeed",
+          "status": "OK",
+          "details": "Updated successfully"
+        }
+      },
+      {
+        "ctid": 112,
+        "name": "n8n",
+        "os": "debian",
+        "osUpdate": "ok",
+        "reboot": false,
+        "app": {
+          "service": "n8n",
+          "status": "OK",
+          "details": "Updated successfully"
+        }
+      },
+      {
+        "ctid": 113,
+        "name": "shlink",
+        "os": "debian",
+        "osUpdate": "ok",
+        "reboot": false,
+        "app": {
+          "service": "shlink",
+          "status": "OK",
+          "details": "Updated successfully"
+        }
+      },
+      {
+        "ctid": 114,
+        "name": "uptimekuma",
+        "os": "debian",
+        "osUpdate": "ok",
+        "reboot": false,
+        "app": {
+          "service": "uptimekuma",
+          "status": "OK",
+          "details": "Updated successfully"
+        }
+      },
+      {
+        "ctid": 115,
+        "name": "your-spotify",
+        "os": "debian",
+        "osUpdate": "ok",
+        "reboot": false,
+        "app": {
+          "service": "your-spotify",
+          "status": "OK",
+          "details": "Updated successfully"
+        }
+      },
+      {
+        "ctid": 117,
+        "name": "domain-monitor",
+        "os": "debian",
+        "osUpdate": "ok",
+        "reboot": false,
+        "app": {
+          "service": "domain-monitor",
+          "status": "OK",
+          "details": "Updated successfully"
+        }
+      },
+      {
+        "ctid": 119,
+        "name": "speedtest-tracker",
+        "os": "debian",
+        "osUpdate": "ok",
+        "reboot": false,
+        "app": {
+          "service": "speedtest-tracker",
+          "status": "OK",
+          "details": "Updated successfully"
+        }
+      },
+      {
+        "ctid": 124,
+        "name": "plane",
+        "os": "debian",
+        "osUpdate": "ok",
+        "reboot": false,
+        "app": {
+          "service": "space",
+          "status": "ERROR",
+          "details": "No matching ct/space.sh script found"
+        }
+      },
+      {
+        "ctid": 125,
+        "name": "myip",
+        "os": "debian",
+        "osUpdate": "ok",
+        "reboot": false,
+        "app": {
+          "service": "myip",
+          "status": "OK",
+          "details": "Updated successfully"
+        }
+      },
+      {
+        "ctid": 128,
+        "name": "wireguard",
+        "os": "debian",
+        "osUpdate": "ok",
+        "reboot": false,
+        "app": {
+          "service": "wireguard",
+          "status": "SKIPPED",
+          "details": "Under-provisioned — increase CPU/RAM to match template"
+        }
+      },
+      {
+        "ctid": 129,
+        "name": "actualbudget",
+        "os": "debian",
+        "osUpdate": "ok",
+        "reboot": false,
+        "app": {
+          "service": "actualbudget",
+          "status": "OK",
+          "details": "Updated successfully"
+        }
+      }
+    ]
+  },
+  {
     "date": "2026-11-22T04:25:05-05:00",
     "dateDisplay": "Nov 22, 2026, 4:25 AM",
     "trigger": "cron",
